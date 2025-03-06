@@ -1,0 +1,5 @@
+A ~ bernoulli(p) in Any[]
+C ~ uniform(0.7, 0.9) in ["!(A == 1)"]
+B ~ unknown() in Any[]
+B_1 ~ bernoulli(0.1) in Any[:(A == 1)]
+B_2 ~ bernoulli(C) in ["!(A == 1)"]
