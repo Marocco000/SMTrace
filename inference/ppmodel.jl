@@ -1,13 +1,13 @@
 #DEPRECATED
-@gen function ppmodel()
+# @gen function ppmodel()
 
-        # noise ~ gamma(1, 1)
-        noise ~ poisson(3)
-        x ~ uniform(noise, 4)
-        y ~ uniform(1, noise)
-        # x ~ uniform(1, noise)
+#         # noise ~ gamma(1, 1)
+#         noise ~ poisson(3)
+#         x ~ uniform(noise, 4)
+#         y ~ uniform(1, noise)
+#         # x ~ uniform(1, noise)
 
-end
+# end
 #         # noise ~ uniform(0.1, 1)
 #         # noise ~ normal(5, 1)
 #         # noise ~ gamma(1, 1)
@@ -416,28 +416,28 @@ end
     # # end
     
     
-    # #model
-    # # @gen function regression_with_outliers(xs::Vector{<:Real})
-    # #     slope ~ normal(0, 2)
-    # #       intercept ~ normal(0, 2)
-    # #       noise ~ gamma(1, noise)
-    # #       proboutlier ~ uniform(0, noise)
+    #model
+    @gen function ppmodel()
+          slope ~ normal(0, 2)
+          intercept ~ normal(0, 2)
+          noise ~ gamma(1, noise)
+          proboutlier ~ uniform(0, noise)
           
-    # #       # Next, we generate the actual y coordinates.
-    # #       n = length(xs)
-    # #       ys = Float64[]
+          # Next, we generate the actual y coordinates.
+        #   n = length(xs)
+        #   ys = Float64[]
           
-    # #       for i = 1:n
-    # #           # Decide whether this point is an outlier, and set
-    # #           # mean and standard deviation accordingly
-    # #           if ({:data => i => :is_outlier} ~ bernoulli(proboutlier))
-    # #               (mu, std) = (0., 10.)
-    # #           else
-    # #               (mu, std) = (xs[i] * slope + intercept, noise)
-    # #           end
-    # #           # Sample a y value for this point
-    # #           push!(ys, {:data => i => :y} ~ normal(mu, std))
-    # #       end
-    # #       ys
-    # #   end;
+          for i = 1:20
+              # Decide whether this point is an outlier, and set
+              # mean and standard deviation accordingly
+              if ({:data => i => :is_outlier} ~ bernoulli(proboutlier))
+                  (mu, std) = (0., 10.)
+              else
+                  (mu, std) = (xs[i] * slope + intercept, noise)
+              end
+              # Sample a y value for this point
+              push!(ys, {:data => i => :y} ~ normal(mu, std))
+          end
+          ys
+      end;
     

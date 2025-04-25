@@ -1,6 +1,7 @@
 # include("julia-to-z3.jl")
 include("julia-to-smt.jl")
 
+
 mutable struct RandomChoiceScope
     variable
     distribution
@@ -45,6 +46,11 @@ vari_map = Dict()
 rcs_with_scopes = []
 variables_with_context = []
 smt_var_map = Dict() #for smt consdtraints
+
+
+# println("HERE")
+# println(RESULTS_DIR[])
+# println("HERE")
 
 # Function to analyze the AST and variable scopes
 #SCOPE repreents a list of condition that need to be true such that the variable is sampled from a certain distribution
@@ -278,6 +284,8 @@ end
 ppfile = get(ARGS, 1, "ppmodel.jl")
 ppfile = "inference/" * ppfile
 
+RESULTS__DIR = get(ARGS, 2, "")
+
 # ppfile = "ppmodel.jl"
 model_code = read(ppfile, String) #Read probabilistic model from julia file
 
@@ -384,7 +392,7 @@ for elem in rcs
     end
 end
 
-open("vardump.txt", "w")  do file
+open(RESULTS__DIR * "parsing_results/vardump.txt", "w")  do file
     for elem in rcs_with_scopes
         if elem isa RandomChoiceScope
             println(file, "$(elem.variable) ~ $(string(elem.distribution)) in $(elem.scope)")
@@ -394,7 +402,7 @@ open("vardump.txt", "w")  do file
     end
 end
 
-open("smtdump.txt", "w")  do file
+open(RESULTS__DIR * "parsing_results/smtdump.txt", "w")  do file
     print(file, smt(alive_constraints))
 
     print(file, smt(var_constraints))

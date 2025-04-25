@@ -1,4 +1,5 @@
 import Random, Logging
+# include(joinpath(@__DIR__, "julie", "config.jl"))
 
 # Disable logging, because @animate is verbose otherwise
 Logging.disable_logging(Logging.Info);
@@ -8,8 +9,7 @@ Logging.disable_logging(Logging.Info);
 #USER DEFINED
 function add_observation_to_smt_model(obs)
     # Dump observations in a file to be picked up python script
-    println("Current obs; $obs")
-    open("obs.txt", "w") do file
+    open(RESULTS_DIR[] * "parsing_results/obs.txt", "w") do file
         for (key, value) in get_values_shallow(obs)
             println(file, "$key = $value")
         end
@@ -17,27 +17,29 @@ function add_observation_to_smt_model(obs)
 
 end
 
-function ransac_smt(observations, ppfile, with_block = true,)
+function ransac_smt(observations, ppfile, with_block = true)
     
     # Clear terminal and set correct directory
     # print("\033c") # clean terminal log
     print("STARTING SMT RANSAC")
 
     cd(@__DIR__)
-    println("Current directory: ")
-    println(pwd())
-    pwd()
+
+    # Saves SMT trace in new RUN_XX directory
+    if !with_block #REFACTOR #otherwise folder was created in block_smt
+        set_current_run() 
+    end
 
     # Run the julia parser
-    println("Running julia parser:")
-    run(`julia context-parsing-gen-func-own.jl $ppfile`)
-    println("Julia parser complete!")
+    # println("Running julia parser:")
+    # run(`julia context-parsing-gen-func-own.jl $ppfile $(RESULTS_DIR[])`)
+    # println("Julia parser complete!")
 
     # Incorporate observations
     add_observation_to_smt_model(observations) #TODO heree?
 
     if !with_block
-        open("block.txt", "w") do file
+        open(RUN_DIR[] * "parsing_results/block.txt", "w") do file
 
             println(file, "")
                
@@ -46,7 +48,7 @@ function ransac_smt(observations, ppfile, with_block = true,)
 
     # Create & run python model
     println("Running py modeling:")
-    run(`/home/mars/Documents/Documents/Study/Master/thesis/pipe/venv/bin/python main.py`)
+    run(`/home/mars/Documents/Documents/Study/Master/thesis/pipe/venv/bin/python main.py $(RESULTS_DIR[]) $(RUN_DIR[])`)
     println("Py modeling complete!")
 
     #TODO(prio: late) print full model in smt file with comments on variable and their distr for human checking purposes and model reuse 
@@ -62,9 +64,13 @@ function ransac_smt(observations, ppfile, with_block = true,)
     choices = smt_choices()
 
     # Create trace from smt choices 
-    trace, weight = generate(ppmodel, (), choices)
-    trace
-
+    if !isempty(choices) 
+        trace, weight = generate(ppmodel, (), choices)
+    
+        return trace
+    else 
+        return nothing
+    end
     # Use this trace as initial starting point for MH
 
     # println("Trace: $trace with weight $weight")
@@ -83,7 +89,7 @@ function smt_choices()
     choices = Gen.choicemap()  # Initialize empty choice map
 
     # Open and read file containing latent variables and their values 
-    open("model_solution.txt", "r") do file
+    open(RUN_DIR[] * "solver_results/model_solution.txt", "r") do file
         for line in eachline(file)
             line = strip(line)  # Remove spaces/newlines
             if occursin("=", line)  # Ensure it's a valid key-value pair
@@ -167,30 +173,34 @@ end
 # end
 
 function block_smt(selection, tr, observations, ppfile)
-    #block smt + extra mh jump?
-
-    # Get SMT trace for fixed values for the variable selection 
-    block_constraints_smt(selection, tr) # save values form trace for the selection to be used as constraints.
+    
+    set_current_run() #creats a new RUN_XX results folder
+    
+    # Get SMT trace that optimizes only on the addresses in selection 
+    block_constraints_smt(selection, tr, observations) # save values form trace for the addresses not in selection to be used as constraints.
     println(selection)
     
     block_tr = ransac_smt(observations, ppfile) # run smt with the obs + selection constriants
-    tr = block_tr
-    
-    # extra MH jump? TODO keep this? effect? bringing in back some stochastic behaviour
-    (tr, _) = mh(tr, selection)
-    tr
+    block_tr
 end
 
-# """Takes a selection of variables that have been previously (fixed) re-sampled in an mh step. 
-# This method takes the values of the respective selected addresses and prints the adr = value pairs in a file.
-# The respective file is going to be taken as constraints for finding optimal assignment of the remaingin addresses."""
-function block_constraints_smt(selection, tr)
-    open("block.txt", "w") do file
+# """Takes a selection of variables that should be resampled(optimized) together while assuming all others are fixed. 
+# This method takes the values of the respective not-selected addresses and prints the adr = value pairs in a file.
+# The respective file is going to be taken as constraints for finding optimal assignment of the selected addresses."""
+function block_constraints_smt(selection, tr, observations)
+    # for item in readdir(".")
+    #     println(item)
+    # end
+    # println()
+    # dirs = filter(name -> isdir(name), readdir("."))
+    # println(dirs)
 
-        # Iterate over the selected choices
+    open(RUN_DIR[] * "parsing_results/block.txt", "w") do file
+
+        # Iterate over the selected choices and fix all other ones that are not already observations
         for choice in get_values_shallow(get_choices(tr))
             key = choice[1]    
-            if key in selection        
+            if !(key in selection) && !Gen.has_value(observations, key)     
                 value = choice[2]
                 value = Float64(value) # in case its a bool result from Bernoulli  
                 println(file, "$key = $value")
@@ -217,12 +227,6 @@ end
 # #     # slope ~ normal(slope_guess, 0.1)
 # #     # intercept ~ normal(intercept_guess, 1.0)
 # # end
-# # OR
-# #TODO but can iterate through trace RCs and sample each in a for loop?
-# # @gen function line_proposal(current_trace)
-# #     slope ~ normal(current_trace[:slope], 0.5)
-# #     intercept ~ normal(current_trace[:intercept], 0.5)
-# # end;
 
 
 # # function ransac_update(tr)

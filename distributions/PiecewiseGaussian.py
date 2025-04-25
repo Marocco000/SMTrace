@@ -47,7 +47,8 @@ def estim_likelihood_piecewise_mixture(x, mean, var, name, solver, segments=3):
             vals.append(one_over_var_component * exp_component)
         else:
             valy = z3.Real(f'{name}_endpoint{i}_1')
-            solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
+            # solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
+            solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8), f'piecewise for {name}_endpoint{i}_1')
             vals.append(valy)
 
     for i in range(S + 1):  # Points from [mean, mean + 3*var]
@@ -56,7 +57,9 @@ def estim_likelihood_piecewise_mixture(x, mean, var, name, solver, segments=3):
             vals.append((1/(var * 2.5066)) * math.exp(-k*k*i*i/8)) #yi in gaussian pdf f(xi) = 1/var2Pi * exp (kkii/8)
         else:
             valy = z3.Real(f'{name}_endpoint{i}_2')
-            solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
+            solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8),
+                                    f'piecewise for {name}_endpoint{i}_2')
+            # solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
             vals.append(valy)
 
     # Compute segment lines formulas

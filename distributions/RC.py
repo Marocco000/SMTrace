@@ -37,7 +37,7 @@ class RC_Distribution(ABC):
 
     @abstractmethod
     def solver_bounds(self, solver, is_observation):
-        """Compute the likelihood of the data given the distribution parameters."""
+        """Adds distribution support constraints to the solver"""
         print("all is abstr")
         pass
 

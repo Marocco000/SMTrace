@@ -7,7 +7,8 @@
 @gen function ppmodel()
 
     # TODO HAS PROBLEM WITH DIVISION TO ZERO 
-    noise ~ poisson(3)
+    noise ~ uniform(0, 1)
+    # noise = 3.99999999
     x ~ uniform(noise, 4)
 
 end

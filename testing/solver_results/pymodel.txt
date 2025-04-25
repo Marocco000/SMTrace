@@ -1,0 +1,1026 @@
+
+[alivenoise == True,
+ aliveintercept == True,
+ aliveslope == True,
+ aliveproboutlier == True,
+ aliveoutlier1 == True,
+ alivey1_1 == (outlier1 == 0),
+ alivey1_2 == outlier1 != 0,
+ aliveoutlier2 == True,
+ alivey2_1 == (outlier2 == 0),
+ alivey2_2 == outlier2 != 0,
+ aliveoutlier3 == True,
+ alivey3_1 == (outlier3 == 0),
+ alivey3_2 == outlier3 != 0,
+ aliveoutlier4 == True,
+ alivey4_1 == (outlier4 == 0),
+ alivey4_2 == outlier4 != 0,
+ aliveoutlier5 == True,
+ alivey5_1 == (outlier5 == 0),
+ alivey5_2 == outlier5 != 0,
+ aliveoutlier6 == True,
+ alivey6_1 == (outlier6 == 0),
+ alivey6_2 == outlier6 != 0,
+ aliveoutlier7 == True,
+ alivey7_1 == (outlier7 == 0),
+ alivey7_2 == outlier7 != 0,
+ aliveoutlier8 == True,
+ alivey8_1 == (outlier8 == 0),
+ alivey8_2 == outlier8 != 0,
+ aliveoutlier9 == True,
+ alivey9_1 == (outlier9 == 0),
+ alivey9_2 == outlier9 != 0,
+ aliveoutlier10 == True,
+ alivey10_1 == (outlier10 == 0),
+ alivey10_2 == outlier10 != 0,
+ aliveoutlier11 == True,
+ alivey11_1 == (outlier11 == 0),
+ alivey11_2 == outlier11 != 0,
+ aliveoutlier12 == True,
+ alivey12_1 == (outlier12 == 0),
+ alivey12_2 == outlier12 != 0,
+ aliveoutlier13 == True,
+ alivey13_1 == (outlier13 == 0),
+ alivey13_2 == outlier13 != 0,
+ aliveoutlier14 == True,
+ alivey14_1 == (outlier14 == 0),
+ alivey14_2 == outlier14 != 0,
+ aliveoutlier15 == True,
+ alivey15_1 == (outlier15 == 0),
+ alivey15_2 == outlier15 != 0,
+ aliveoutlier16 == True,
+ alivey16_1 == (outlier16 == 0),
+ alivey16_2 == outlier16 != 0,
+ aliveoutlier17 == True,
+ alivey17_1 == (outlier17 == 0),
+ alivey17_2 == outlier17 != 0,
+ aliveoutlier18 == True,
+ alivey18_1 == (outlier18 == 0),
+ alivey18_2 == outlier18 != 0,
+ aliveoutlier19 == True,
+ alivey19_1 == (outlier19 == 0),
+ alivey19_2 == outlier19 != 0,
+ aliveoutlier20 == True,
+ alivey20_1 == (outlier20 == 0),
+ alivey20_2 == outlier20 != 0,
+ x1 == -5,
+ x2 == -1118421052631579/250000000000000,
+ x3 == -19736842105263157/5000000000000000,
+ x4 == -34210526315789473/10000000000000000,
+ x5 == -28947368421052633/10000000000000000,
+ x6 == -5921052631578947/2500000000000000,
+ x7 == -18421052631578947/10000000000000000,
+ x8 == -6578947368421053/5000000000000000,
+ x9 == -7894736842105263/10000000000000000,
+ x10 == -2631578947368421/10000000000000000,
+ x11 == 2631578947368421/10000000000000000,
+ x12 == 7894736842105263/10000000000000000,
+ x13 == 6578947368421053/5000000000000000,
+ x14 == 18421052631578947/10000000000000000,
+ x15 == 5921052631578947/2500000000000000,
+ x16 == 28947368421052633/10000000000000000,
+ x17 == 34210526315789473/10000000000000000,
+ x18 == 19736842105263157/5000000000000000,
+ x19 == 1118421052631579/250000000000000,
+ x20 == 5,
+ mean1 == intercept + slope*x1,
+ mean2 == intercept + slope*x2,
+ mean3 == intercept + slope*x3,
+ mean4 == intercept + slope*x4,
+ mean5 == intercept + slope*x5,
+ mean6 == intercept + slope*x6,
+ mean7 == intercept + slope*x7,
+ mean8 == intercept + slope*x8,
+ mean9 == intercept + slope*x9,
+ mean10 == intercept + slope*x10,
+ mean11 == intercept + slope*x11,
+ mean12 == intercept + slope*x12,
+ mean13 == intercept + slope*x13,
+ mean14 == intercept + slope*x14,
+ mean15 == intercept + slope*x15,
+ mean16 == intercept + slope*x16,
+ mean17 == intercept + slope*x17,
+ mean18 == intercept + slope*x18,
+ mean19 == intercept + slope*x19,
+ mean20 == intercept + slope*x20,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ noise > 0,
+ likelihoodnoise ==
+ If(noise < 1/10, 0, If(noise <= 1, noise_div, 0)),
+ likelihoodintercept ==
+ If(intercept > 6,
+    0,
+    If(intercept < -6,
+       0,
+       If(intercept < -4,
+          1548739910366263/125000000000000000*intercept +
+          3827773244966823/50000000000000000,
+          If(intercept < -2,
+             734304212622459/15625000000000000*intercept +
+             2687220827487069/12500000000000000,
+             If(intercept < 0,
+                2452708227076559/62500000000000000*intercept +
+                19947339024974067/100000000000000000,
+                If(intercept < 2,
+                   -2452708227076559/62500000000000000*
+                   intercept +
+                   19947339024974067/100000000000000000,
+                   If(intercept < 4,
+                      -734304212622459/15625000000000000*
+                      intercept +
+                      2687220827487069/12500000000000000,
+                      If(intercept < 6,
+                         -1548739910366263/125000000000000000*
+                         intercept +
+                         3827773244966823/50000000000000000,
+                         0)))))))),
+ likelihoodslope ==
+ If(slope > 6,
+    0,
+    If(slope < -6,
+       0,
+       If(slope < -4,
+          1548739910366263/125000000000000000*slope +
+          3827773244966823/50000000000000000,
+          If(slope < -2,
+             734304212622459/15625000000000000*slope +
+             2687220827487069/12500000000000000,
+             If(slope < 0,
+                2452708227076559/62500000000000000*slope +
+                19947339024974067/100000000000000000,
+                If(slope < 2,
+                   -2452708227076559/62500000000000000*slope +
+                   19947339024974067/100000000000000000,
+                   If(slope < 4,
+                      -734304212622459/15625000000000000*
+                      slope +
+                      2687220827487069/12500000000000000,
+                      If(slope < 6,
+                         -1548739910366263/125000000000000000*
+                         slope +
+                         3827773244966823/50000000000000000,
+                         0)))))))),
+ likelihoodproboutlier ==
+ If(proboutlier < 0,
+    0,
+    If(proboutlier <= 1, proboutlier_div, 0)),
+ likelihoodoutlier1 ==
+ If(outlier1 == 1, proboutlier, 1 - proboutlier),
+ noise > 0,
+ Implies(piecewise for y1_1_endpoint3_1,
+         y1_1_endpoint3_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*3*3)/8)**0/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**1/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**2/2 +
+          ((-(noise*1)*noise*1*3*3)/8)**3/6 +
+          ((-(noise*1)*noise*1*3*3)/8)**4/24 +
+          ((-(noise*1)*noise*1*3*3)/8)**5/120 +
+          ((-(noise*1)*noise*1*3*3)/8)**6/720 +
+          ((-(noise*1)*noise*1*3*3)/8)**7/5040 +
+          ((-(noise*1)*noise*1*3*3)/8)**8/40320 +
+          ((-(noise*1)*noise*1*3*3)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint2_1,
+         y1_1_endpoint2_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*2*2)/8)**0/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**1/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**2/2 +
+          ((-(noise*1)*noise*1*2*2)/8)**3/6 +
+          ((-(noise*1)*noise*1*2*2)/8)**4/24 +
+          ((-(noise*1)*noise*1*2*2)/8)**5/120 +
+          ((-(noise*1)*noise*1*2*2)/8)**6/720 +
+          ((-(noise*1)*noise*1*2*2)/8)**7/5040 +
+          ((-(noise*1)*noise*1*2*2)/8)**8/40320 +
+          ((-(noise*1)*noise*1*2*2)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint1_1,
+         y1_1_endpoint1_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint0_2,
+         y1_1_endpoint0_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*0*0)/8)**0/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**1/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**2/2 +
+          ((-(noise*1)*noise*1*0*0)/8)**3/6 +
+          ((-(noise*1)*noise*1*0*0)/8)**4/24 +
+          ((-(noise*1)*noise*1*0*0)/8)**5/120 +
+          ((-(noise*1)*noise*1*0*0)/8)**6/720 +
+          ((-(noise*1)*noise*1*0*0)/8)**7/5040 +
+          ((-(noise*1)*noise*1*0*0)/8)**8/40320 +
+          ((-(noise*1)*noise*1*0*0)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint1_2,
+         y1_1_endpoint1_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint2_2,
+         y1_1_endpoint2_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*2*2)/8)**0/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**1/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**2/2 +
+          ((-(noise*1)*noise*1*2*2)/8)**3/6 +
+          ((-(noise*1)*noise*1*2*2)/8)**4/24 +
+          ((-(noise*1)*noise*1*2*2)/8)**5/120 +
+          ((-(noise*1)*noise*1*2*2)/8)**6/720 +
+          ((-(noise*1)*noise*1*2*2)/8)**7/5040 +
+          ((-(noise*1)*noise*1*2*2)/8)**8/40320 +
+          ((-(noise*1)*noise*1*2*2)/8)**9/362880)),
+ Implies(piecewise for y1_1_endpoint3_2,
+         y1_1_endpoint3_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*3*3)/8)**0/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**1/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**2/2 +
+          ((-(noise*1)*noise*1*3*3)/8)**3/6 +
+          ((-(noise*1)*noise*1*3*3)/8)**4/24 +
+          ((-(noise*1)*noise*1*3*3)/8)**5/120 +
+          ((-(noise*1)*noise*1*3*3)/8)**6/720 +
+          ((-(noise*1)*noise*1*3*3)/8)**7/5040 +
+          ((-(noise*1)*noise*1*3*3)/8)**8/40320 +
+          ((-(noise*1)*noise*1*3*3)/8)**9/362880)),
+ likelihoody1_1 ==
+ If(y1_1 > mean1 + noise*1*3,
+    0,
+    If(y1_1 < mean1 - noise*1*3,
+       0,
+       If(y1_1 < mean1 - noise*1*2,
+          ((y1_1_endpoint2_1 - y1_1_endpoint3_1)/
+           (mean1 - noise*1*2 - (mean1 - noise*1*3)))*
+          y1_1 +
+          y1_1_endpoint3_1 -
+          ((y1_1_endpoint2_1 - y1_1_endpoint3_1)/
+           (mean1 - noise*1*2 - (mean1 - noise*1*3)))*
+          (mean1 - noise*1*3),
+          If(y1_1 < mean1 - noise*1*1,
+             ((y1_1_endpoint1_1 - y1_1_endpoint2_1)/
+              (mean1 - noise*1*1 - (mean1 - noise*1*2)))*
+             y1_1 +
+             y1_1_endpoint2_1 -
+             ((y1_1_endpoint1_1 - y1_1_endpoint2_1)/
+              (mean1 - noise*1*1 - (mean1 - noise*1*2)))*
+             (mean1 - noise*1*2),
+             If(y1_1 < mean1 + noise*1*0,
+                ((y1_1_endpoint0_2 - y1_1_endpoint1_1)/
+                 (mean1 + noise*1*0 - (mean1 - noise*1*1)))*
+                y1_1 +
+                y1_1_endpoint1_1 -
+                ((y1_1_endpoint0_2 - y1_1_endpoint1_1)/
+                 (mean1 + noise*1*0 - (mean1 - noise*1*1)))*
+                (mean1 - noise*1*1),
+                If(y1_1 < mean1 + noise*1*1,
+                   ((y1_1_endpoint1_2 - y1_1_endpoint0_2)/
+                    (mean1 + noise*1*1 - (mean1 + noise*1*0)))*
+                   y1_1 +
+                   y1_1_endpoint0_2 -
+                   ((y1_1_endpoint1_2 - y1_1_endpoint0_2)/
+                    (mean1 + noise*1*1 - (mean1 + noise*1*0)))*
+                   (mean1 + noise*1*0),
+                   If(y1_1 < mean1 + noise*1*2,
+                      ((y1_1_endpoint2_2 - y1_1_endpoint1_2)/
+                       (mean1 + noise*1*2 -
+                        (mean1 + noise*1*1)))*
+                      y1_1 +
+                      y1_1_endpoint1_2 -
+                      ((y1_1_endpoint2_2 - y1_1_endpoint1_2)/
+                       (mean1 + noise*1*2 -
+                        (mean1 + noise*1*1)))*
+                      (mean1 + noise*1*1),
+                      If(y1_1 < mean1 + noise*1*3,
+                         ((y1_1_endpoint3_2 -
+                           y1_1_endpoint2_2)/
+                          (mean1 + noise*1*3 -
+                           (mean1 + noise*1*2)))*
+                         y1_1 +
+                         y1_1_endpoint2_2 -
+                         ((y1_1_endpoint3_2 -
+                           y1_1_endpoint2_2)/
+                          (mean1 + noise*1*3 -
+                           (mean1 + noise*1*2)))*
+                         (mean1 + noise*1*2),
+                         0)))))))),
+ likelihoody1_2 ==
+ If(y1_2 > 30,
+    0,
+    If(y1_2 < -30,
+       0,
+       If(y1_2 < -20,
+          1923671355585173/2500000000000000000000000000000000000000*
+          y1_2 +
+          5771014066755519/250000000000000000000000000000000000000,
+          If(y1_2 < -10,
+             7433681425194827/500000000000000000000000*y1_2 +
+             2973472570077931/10000000000000000000000,
+             If(y1_2 < 0,
+                3989452937631963/1000000000000000000*y1_2 +
+                3989467804994813/100000000000000000,
+                If(y1_2 < 10,
+                   -3989452937631963/1000000000000000000*
+                   y1_2 +
+                   3989467804994813/100000000000000000,
+                   If(y1_2 < 20,
+                      -7433681425194827/500000000000000000000000*
+                      y1_2 +
+                      2973472570077931/10000000000000000000000,
+                      If(y1_2 < 30,
+                         -1923671355585173/2500000000000000000000000000000000000000*
+                         y1_2 +
+                         23084056267022073/1000000000000000000000000000000000000000,
+                         0)))))))),
+ likelihoodoutlier2 ==
+ If(outlier2 == 1, proboutlier, 1 - proboutlier),
+ noise > 0,
+ Implies(piecewise for y2_1_endpoint3_1,
+         y2_1_endpoint3_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*3*3)/8)**0/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**1/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**2/2 +
+          ((-(noise*1)*noise*1*3*3)/8)**3/6 +
+          ((-(noise*1)*noise*1*3*3)/8)**4/24 +
+          ((-(noise*1)*noise*1*3*3)/8)**5/120 +
+          ((-(noise*1)*noise*1*3*3)/8)**6/720 +
+          ((-(noise*1)*noise*1*3*3)/8)**7/5040 +
+          ((-(noise*1)*noise*1*3*3)/8)**8/40320 +
+          ((-(noise*1)*noise*1*3*3)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint2_1,
+         y2_1_endpoint2_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*2*2)/8)**0/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**1/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**2/2 +
+          ((-(noise*1)*noise*1*2*2)/8)**3/6 +
+          ((-(noise*1)*noise*1*2*2)/8)**4/24 +
+          ((-(noise*1)*noise*1*2*2)/8)**5/120 +
+          ((-(noise*1)*noise*1*2*2)/8)**6/720 +
+          ((-(noise*1)*noise*1*2*2)/8)**7/5040 +
+          ((-(noise*1)*noise*1*2*2)/8)**8/40320 +
+          ((-(noise*1)*noise*1*2*2)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint1_1,
+         y2_1_endpoint1_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint0_2,
+         y2_1_endpoint0_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*0*0)/8)**0/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**1/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**2/2 +
+          ((-(noise*1)*noise*1*0*0)/8)**3/6 +
+          ((-(noise*1)*noise*1*0*0)/8)**4/24 +
+          ((-(noise*1)*noise*1*0*0)/8)**5/120 +
+          ((-(noise*1)*noise*1*0*0)/8)**6/720 +
+          ((-(noise*1)*noise*1*0*0)/8)**7/5040 +
+          ((-(noise*1)*noise*1*0*0)/8)**8/40320 +
+          ((-(noise*1)*noise*1*0*0)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint1_2,
+         y2_1_endpoint1_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint2_2,
+         y2_1_endpoint2_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*2*2)/8)**0/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**1/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**2/2 +
+          ((-(noise*1)*noise*1*2*2)/8)**3/6 +
+          ((-(noise*1)*noise*1*2*2)/8)**4/24 +
+          ((-(noise*1)*noise*1*2*2)/8)**5/120 +
+          ((-(noise*1)*noise*1*2*2)/8)**6/720 +
+          ((-(noise*1)*noise*1*2*2)/8)**7/5040 +
+          ((-(noise*1)*noise*1*2*2)/8)**8/40320 +
+          ((-(noise*1)*noise*1*2*2)/8)**9/362880)),
+ Implies(piecewise for y2_1_endpoint3_2,
+         y2_1_endpoint3_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*3*3)/8)**0/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**1/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**2/2 +
+          ((-(noise*1)*noise*1*3*3)/8)**3/6 +
+          ((-(noise*1)*noise*1*3*3)/8)**4/24 +
+          ((-(noise*1)*noise*1*3*3)/8)**5/120 +
+          ((-(noise*1)*noise*1*3*3)/8)**6/720 +
+          ((-(noise*1)*noise*1*3*3)/8)**7/5040 +
+          ((-(noise*1)*noise*1*3*3)/8)**8/40320 +
+          ((-(noise*1)*noise*1*3*3)/8)**9/362880)),
+ likelihoody2_1 ==
+ If(y2_1 > mean2 + noise*1*3,
+    0,
+    If(y2_1 < mean2 - noise*1*3,
+       0,
+       If(y2_1 < mean2 - noise*1*2,
+          ((y2_1_endpoint2_1 - y2_1_endpoint3_1)/
+           (mean2 - noise*1*2 - (mean2 - noise*1*3)))*
+          y2_1 +
+          y2_1_endpoint3_1 -
+          ((y2_1_endpoint2_1 - y2_1_endpoint3_1)/
+           (mean2 - noise*1*2 - (mean2 - noise*1*3)))*
+          (mean2 - noise*1*3),
+          If(y2_1 < mean2 - noise*1*1,
+             ((y2_1_endpoint1_1 - y2_1_endpoint2_1)/
+              (mean2 - noise*1*1 - (mean2 - noise*1*2)))*
+             y2_1 +
+             y2_1_endpoint2_1 -
+             ((y2_1_endpoint1_1 - y2_1_endpoint2_1)/
+              (mean2 - noise*1*1 - (mean2 - noise*1*2)))*
+             (mean2 - noise*1*2),
+             If(y2_1 < mean2 + noise*1*0,
+                ((y2_1_endpoint0_2 - y2_1_endpoint1_1)/
+                 (mean2 + noise*1*0 - (mean2 - noise*1*1)))*
+                y2_1 +
+                y2_1_endpoint1_1 -
+                ((y2_1_endpoint0_2 - y2_1_endpoint1_1)/
+                 (mean2 + noise*1*0 - (mean2 - noise*1*1)))*
+                (mean2 - noise*1*1),
+                If(y2_1 < mean2 + noise*1*1,
+                   ((y2_1_endpoint1_2 - y2_1_endpoint0_2)/
+                    (mean2 + noise*1*1 - (mean2 + noise*1*0)))*
+                   y2_1 +
+                   y2_1_endpoint0_2 -
+                   ((y2_1_endpoint1_2 - y2_1_endpoint0_2)/
+                    (mean2 + noise*1*1 - (mean2 + noise*1*0)))*
+                   (mean2 + noise*1*0),
+                   If(y2_1 < mean2 + noise*1*2,
+                      ((y2_1_endpoint2_2 - y2_1_endpoint1_2)/
+                       (mean2 + noise*1*2 -
+                        (mean2 + noise*1*1)))*
+                      y2_1 +
+                      y2_1_endpoint1_2 -
+                      ((y2_1_endpoint2_2 - y2_1_endpoint1_2)/
+                       (mean2 + noise*1*2 -
+                        (mean2 + noise*1*1)))*
+                      (mean2 + noise*1*1),
+                      If(y2_1 < mean2 + noise*1*3,
+                         ((y2_1_endpoint3_2 -
+                           y2_1_endpoint2_2)/
+                          (mean2 + noise*1*3 -
+                           (mean2 + noise*1*2)))*
+                         y2_1 +
+                         y2_1_endpoint2_2 -
+                         ((y2_1_endpoint3_2 -
+                           y2_1_endpoint2_2)/
+                          (mean2 + noise*1*3 -
+                           (mean2 + noise*1*2)))*
+                         (mean2 + noise*1*2),
+                         0)))))))),
+ likelihoody2_2 ==
+ If(y2_2 > 30,
+    0,
+    If(y2_2 < -30,
+       0,
+       If(y2_2 < -20,
+          1923671355585173/2500000000000000000000000000000000000000*
+          y2_2 +
+          5771014066755519/250000000000000000000000000000000000000,
+          If(y2_2 < -10,
+             7433681425194827/500000000000000000000000*y2_2 +
+             2973472570077931/10000000000000000000000,
+             If(y2_2 < 0,
+                3989452937631963/1000000000000000000*y2_2 +
+                3989467804994813/100000000000000000,
+                If(y2_2 < 10,
+                   -3989452937631963/1000000000000000000*
+                   y2_2 +
+                   3989467804994813/100000000000000000,
+                   If(y2_2 < 20,
+                      -7433681425194827/500000000000000000000000*
+                      y2_2 +
+                      2973472570077931/10000000000000000000000,
+                      If(y2_2 < 30,
+                         -1923671355585173/2500000000000000000000000000000000000000*
+                         y2_2 +
+                         23084056267022073/1000000000000000000000000000000000000000,
+                         0)))))))),
+ likelihoodoutlier3 ==
+ If(outlier3 == 1, proboutlier, 1 - proboutlier),
+ noise > 0,
+ Implies(piecewise for y3_1_endpoint3_1,
+         y3_1_endpoint3_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*3*3)/8)**0/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**1/1 +
+          ((-(noise*1)*noise*1*3*3)/8)**2/2 +
+          ((-(noise*1)*noise*1*3*3)/8)**3/6 +
+          ((-(noise*1)*noise*1*3*3)/8)**4/24 +
+          ((-(noise*1)*noise*1*3*3)/8)**5/120 +
+          ((-(noise*1)*noise*1*3*3)/8)**6/720 +
+          ((-(noise*1)*noise*1*3*3)/8)**7/5040 +
+          ((-(noise*1)*noise*1*3*3)/8)**8/40320 +
+          ((-(noise*1)*noise*1*3*3)/8)**9/362880)),
+ Implies(piecewise for y3_1_endpoint2_1,
+         y3_1_endpoint2_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*2*2)/8)**0/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**1/1 +
+          ((-(noise*1)*noise*1*2*2)/8)**2/2 +
+          ((-(noise*1)*noise*1*2*2)/8)**3/6 +
+          ((-(noise*1)*noise*1*2*2)/8)**4/24 +
+          ((-(noise*1)*noise*1*2*2)/8)**5/120 +
+          ((-(noise*1)*noise*1*2*2)/8)**6/720 +
+          ((-(noise*1)*noise*1*2*2)/8)**7/5040 +
+          ((-(noise*1)*noise*1*2*2)/8)**8/40320 +
+          ((-(noise*1)*noise*1*2*2)/8)**9/362880)),
+ Implies(piecewise for y3_1_endpoint1_1,
+         y3_1_endpoint1_1 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y3_1_endpoint0_2,
+         y3_1_endpoint0_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*0*0)/8)**0/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**1/1 +
+          ((-(noise*1)*noise*1*0*0)/8)**2/2 +
+          ((-(noise*1)*noise*1*0*0)/8)**3/6 +
+          ((-(noise*1)*noise*1*0*0)/8)**4/24 +
+          ((-(noise*1)*noise*1*0*0)/8)**5/120 +
+          ((-(noise*1)*noise*1*0*0)/8)**6/720 +
+          ((-(noise*1)*noise*1*0*0)/8)**7/5040 +
+          ((-(noise*1)*noise*1*0*0)/8)**8/40320 +
+          ((-(noise*1)*noise*1*0*0)/8)**9/362880)),
+ Implies(piecewise for y3_1_endpoint1_2,
+         y3_1_endpoint1_2 ==
+         (1/(noise*12533/5000))*
+         (0 +
+          ((-(noise*1)*noise*1*1*1)/8)**0/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**1/1 +
+          ((-(noise*1)*noise*1*1*1)/8)**2/2 +
+          ((-(noise*1)*noise*1*1*1)/8)**3/6 +
+          ((-(noise*1)*noise*1*1*1)/8)**4/24 +
+          ((-(noise*1)*noise*1*1*1)/8)**5/120 +
+          ((-(noise*1)*noise*1*1*1)/8)**6/720 +
+          ((-(noise*1)*noise*1*1*1)/8)**7/5040 +
+          ((-(noise*1)*noise*1*1*1)/8)**8/40320 +
+          ((-(noise*1)*noise*1*1*1)/8)**9/362880)),
+ Implies(piecewise for y3_1_endpoint2_2,
+         y3_1_endpoint2_2 ==
+         (1/(noise*12533/5000))*
+         (... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ... +
+          ...)),
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...,
+ ...]

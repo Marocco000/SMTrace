@@ -15,6 +15,8 @@ from distributions.RC_poisson import RC_Poisson
 from distributions.RC_uniform_discrete import RC_Uniform_Discrete
 from distributions.RC_unifrom import RC_Uniform
 from tools.solver import init_solver
+import config
+
 
 
 #TODO: var_choices is passed around like ping-pong ball, set as global variable
@@ -31,22 +33,30 @@ def take_model_from_files(solver):
 
     choice_map, trace = read_model_from_dump(solver, var_choices)
 
+
     # Incorporate observations
-    add_observations_to_model(solver, choice_map, 'obs.txt')  # add normal vars as well for refereneces
+    add_observations_to_model(solver, choice_map, config.working_dir + 'parsing_results/obs.txt')  # add normal vars as well for refereneces
 
     # Add fixed subset of decision variables (e.g. for block resimulation)(#TODO choose if u want to keep in trace prob compute)
-    add_observations_to_model(solver, choice_map, 'block.txt')  # add normal vars as well for refereneces
+    add_observations_to_model(solver, choice_map, config.run_dir + 'parsing_results/block.txt', False)  # add normal vars as well for refereneces
+
+    # Check and add constraints for random samples that need to be fixed prior ot solving
+    for elem in choice_map:
+        if choice_map[elem].fixed_sample is not None and choice_map[elem].RC.is_observation == False:
+            print(f"Fixed sample for {elem}: {choice_map[elem].fixed_sample}")
+            solver.add(choice_map[elem].RC.value == choice_map[elem].fixed_sample)
+
 
     # Add bounds to the latent RC variables (eg. uniform[3,5] -> 3 <= x <= 5)
     add_bounds_to_latent_RC_vars(solver, choice_map)
 
     print("\nMODEL BEFORE OPTI\n")
-    f = open("pymodel.txt", "w")
+    f = open(config.run_dir + "solver_results/pymodel.txt", "w")
     f.write(f"\n{solver.assertions()}")
     f.close()
     print("\n------------\n")
 
-    # save_SMT_LIB_standard_model(solver)
+    save_SMT_LIB_standard_model(solver)
     return choice_map, trace
 
 
@@ -57,9 +67,9 @@ def add_bounds_to_latent_RC_vars(solver, choice_map):
             # print(f"Added bounds for variable: {key}")
             choice_map[key].solver_bounds(solver)
 
-def add_observations_to_model(solver, choice_map, filename):
+def add_observations_to_model(solver, choice_map, filename, keep_in_trace_compute = True):
     '''Takes a file with adr = value lines and adds the values to the SMT model as constraints.'''
-    # TODO (deal with Branch vars, is B== 1 enough or do i need B1 == B2 == 1
+    # TODO (deal with Branch vars, is B == 1 enough or do i need B1 == B2 == 1
     with open(filename, 'r') as file:
         data = file.read().split("\n")
     for line in data:
@@ -68,11 +78,13 @@ def add_observations_to_model(solver, choice_map, filename):
             value = line.split(" = ")[1]
             solver.add(choice_map[var_name].RC.value == float(value))
             choice_map[var_name].RC.is_observation = True
+            choice_map[var_name].selected = keep_in_trace_compute # Remove likelihood from trace prob compute
+
 
 def transport_alive_constraints(solver):
     '''Read SMT-LIB standard constraint porlem containing the alive conditions.
     Alive constraints represent the conditions stochastic existence of their associated RC variables'''
-    with open('smtdump.txt', 'r') as file:
+    with open(config.working_dir + 'parsing_results/smtdump.txt', 'r') as file:
         smt = file.read()
 
     solver.from_string(smt) # add the alive constraints
@@ -115,7 +127,7 @@ def param_in_cp(arg, choice_map, variables):
             return choice_map[arg].RC.value
         return variables[arg]
 
-def create_RC_object(choice_map, distribution_name, distribution_args, var_name, variables, solver):
+def create_RC_object(choice_map, distribution_name, distribution_args, var_name, variables, solver, fixed_random_choices):
     ''' Takes the parsed distribution name and parameters and creates a RC decision varibale for the CP model'''
     #TODO: exhaustive
     if distribution_name == "bernoulli":
@@ -133,14 +145,16 @@ def create_RC_object(choice_map, distribution_name, distribution_args, var_name,
         name = distribution_args[1]
         #if variance is a constant, either defined by value or variable, keep as is
 
-        if choice_map.get(name) is not None: #TODO and has no observation!
+        if choice_map.get(name) is not None:
             #If variance is a sampled RC, fix it to a radnom value (priority decision for CP)
             #Sample a random variable from the bounds given by the sample statement of the variance variable and remember it
             randomSampledDecision = choice_map[name].sample_and_fix()
             #TODO remove it from trace prob compute as an option
-            print(f"Variance {variance} gets fixed value of:  {randomSampledDecision}")
+            # print(f"Variance {variance} gets fixed value of:  {randomSampledDecision}")
             #TODO: push and pop this random decision in case its not fruitfull instead of doing it at the beginning
-            solver.add(variance == randomSampledDecision)
+
+            # This is done later if variance does not have an observations alerady: solver.add(variance == randomSampledDecision)
+
 
         choice_map[var_name] = RC_Normal(RC(var_name), mean, variance, solver)
     elif distribution_name == "unknown":
@@ -158,10 +172,11 @@ def create_RC_object(choice_map, distribution_name, distribution_args, var_name,
     elif distribution_name == "exponential":
         choice_map[var_name] = RC_Exponential(RC(var_name), param_in_cp(distribution_args[0], choice_map, variables))
 
-    # elif distribution_name == "categorical":
+    elif distribution_name == "categorical":
     #     # TODO each array elem has to be converted to cp object
-    #     # choice_map[var_name] = RC_Categorical(RC(var_name), distribution_args)
-    #     raise Exception(f"{distribution_name} distribution not supported")
+    #     probabilities = as_array(distribution_args[0])
+        probabilities = [0,1,2]
+        choice_map[var_name] = RC_Categorical(RC(var_name), probabilities)
 
     else:
         raise Exception(f"{distribution_name} distribution not supported")
@@ -177,8 +192,9 @@ def read_model_from_dump(solver, var_choices):
     '''Reads the RC variables that are going be added to the CP model'''
     choice_map = dict()
 
+    fixed_random_choices = dict() # will hold a the names of choices that will need to be fixed prior to solving
 
-    with open('vardump.txt', 'r') as file:
+    with open(config.working_dir + 'parsing_results/vardump.txt', 'r') as file:
         data = file.read().split("\n")
     for line in data:
         if line != "":
@@ -187,7 +203,7 @@ def read_model_from_dump(solver, var_choices):
             var_name, distribution_name, distribution_args = parse_sample_line(sample)
 
             # Create RC object and add to choice_map
-            create_RC_object(choice_map, distribution_name, distribution_args, var_name, var_choices, solver)
+            create_RC_object(choice_map, distribution_name, distribution_args, var_name, var_choices, solver, fixed_random_choices)
 
 
     #Set correct likelihooddv: for all RC distributions that are known
@@ -228,7 +244,7 @@ def read_model_from_dump(solver, var_choices):
 
     return choice_map, trace
 
-def save_SMT_LIB_standard_model(solver, file = "smtmodels/pp_model_SMTLIB.smt2"):
+def save_SMT_LIB_standard_model(solver, file = "smtmodels/simplepp_model_SMTLIB.smt2"):
     """Saves a model in SMT-LIB standard format."""
     with open(file, "w") as f:
         f.write(solver.to_smt2())

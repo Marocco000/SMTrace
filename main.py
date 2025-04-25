@@ -1,4 +1,6 @@
 import math
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import z3
@@ -13,6 +15,9 @@ from data_transport import transport_data_from_PP_model, save_SMT_LIB_standard_m
 from tools.numerical import floaty
 from tools.sat_optimization import update_lower_bound
 from tools.solver import init_solver
+
+import config
+
 
 '''
 Simple If statement program:
@@ -93,7 +98,7 @@ def copmute_trace_prob_estim_from_likelihood_dv(trace, choice_map, compound_func
 
     return pdfi
 
-def solver_opti_loop(solver, trace_prob, iter_resources = 10, log = False, plot=True):
+def solver_opti_loop(solver, trace_prob, iter_resources = 1, log = False, plot=True):
     '''Manual optimization loop that maximizes the trace probability'''
     #TODO: LOG decision variables
     #TODO: is this using incremental solving in th emain loop or restars CP??
@@ -114,18 +119,18 @@ def solver_opti_loop(solver, trace_prob, iter_resources = 10, log = False, plot=
         #                        title=f"iter {iter}")
 
         # update trace_prob lower bound, use current model trace value as lower bound
-        current = m[trace_prob].as_decimal(20)
-        new_lower_bound = update_lower_bound(trace_prob, current, solver)
-        if new_lower_bound:
-            if log:
-                print(f"new lower bound for trace probability found: {new_lower_bound}")
-            solver.add(trace_prob >= float(new_lower_bound))  # Add new bound as constraint
-        else: # if no new lower bound can be found, optimization is done
-            break;
+        # current = m[trace_prob].as_decimal(20)
+        # new_lower_bound = update_lower_bound(trace_prob, current, solver)
+        # if new_lower_bound:
+        #     if log:
+        #         print(f"new lower bound for trace probability found: {new_lower_bound}")
+        #     solver.add(trace_prob >= float(new_lower_bound))  # Add new bound as constraint
+        # else: # if no new lower bound can be found, optimization is done
+        #     break;
         iter += 1
         if iter %5 == 0:
             if m is not None:
-                save_model_solution(m, f"intermediate_solution{iter}.txt", likelihoods = True)
+                save_model_solution(m, f"{config.run_dir}solver_results/intermediate/intermediate_solution{iter}.txt", likelihoods = True)
 
     print(f"Final Model: {m}")
     if m is not None:
@@ -133,12 +138,16 @@ def solver_opti_loop(solver, trace_prob, iter_resources = 10, log = False, plot=
     if m is None:
         #TODO: for this to show an unsat core, all added constraints have to be tracked and named
         # with s.assert_and_track(constraint , 'consraint_name')
+        with open(config.run_dir + "solver_results/model_solution.txt", "w") as f:
+            f.write("")
+        f.close
         print(f"Unsat core: {solver.unsat_core()}")
 
-def save_model_solution(m, file = "model_solution.txt", likelihoods = False):
+def save_model_solution(m, file = "solver_results/model_solution.txt", likelihoods = False):
     '''Saves the model solution representing the trace.'''
+
     print(f"saving model solution (for likelihoods ={likelihoods})")
-    with open(file, "w") as f:
+    with open(config.run_dir + file, "w") as f:
         for d in m.decls():
             # ignore alive variables and likelihood variables
             if "alive" in d.name():
@@ -183,7 +192,7 @@ def use_manual_optimiz_loop():
     trace_prob = z3.Real("trace_prob")
     solver.add(trace_prob == trace_prob_estim)
 
-    # save_SMT_LIB_standard_model(solver)
+    save_SMT_LIB_standard_model(solver)
 
     # Optimization loop
 
@@ -198,6 +207,18 @@ def use_manual_optimiz_loop():
 # xs = [-5., -4., -3., -2., -1., 0., 1., 2., 3., 4., 5.]
 # ys = [6.75003, 6.1568, 4.26414, 1.84894, 3.09686, 1.94026, 1.36411, -0.83959, -0.976, -1.93363, -2.91303]
 #
+
+#Setup file paths
+# Probabilisitc problem directory
+# working_dir = ""#TODO get from run args[]
+# run_dir = #TODO get from run args[] or determine through name conflict; create on the spot
+
+if len(sys.argv) > 1:
+    config.working_dir = sys.argv[1]
+    config.run_dir = sys.argv[2]
+else:
+    config.working_dir = "/home/mars/Documents/Documents/Study/Master/thesis/pipe/testing/"
+    config.run_dir = "/home/mars/Documents/Documents/Study/Master/thesis/pipe/testing/"
 
 use_manual_optimiz_loop()
 

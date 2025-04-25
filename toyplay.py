@@ -42,9 +42,16 @@ b = z3.Bool('b')
 # s.add(a == b)
 # s.add(a != b)
 
-s.assert_and_track(a , 'a1')
-s.assert_and_track(a != b, 'a2')
+# s.assert_and_track(a , 'a1')
+s.add(a)
+s.add(a != b )
+# s.assert_and_track(a != b, 'a2')
+
 s.assert_and_track(a == b , 'a3')
+# s.add(a == b)
+# s.assert_and_track(a == b , 'a4')
+# s.add(a == b)
+
 # s.add(a == b, a == b + 1)
 print(s.check())
 # print(s.model())

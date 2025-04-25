@@ -24,7 +24,8 @@ class RC_Poisson(RC_Distribution):
 
         # Sanity constraint that variance > 0
         if isinstance(self.var, z3.ExprRef):
-            self.solver.add(self.var > 0)
+            # self.solver.add(self.var > 0)
+            self.solver.assert_and_track(self.var > 0, f"Poisson variance for {RC.name}")
         else:
             assert self.var > 0
 
@@ -43,9 +44,11 @@ class RC_Poisson(RC_Distribution):
             self.normal_bounds(solver, self.RC.value, num_of_stds)
 
     def normal_bounds(self, solver, value, num_of_stds = 3):
-        solver.add(self.RC.value >= 0) #rate is bigger than 0
+        # solver.add(self.RC.value >= 0) #rate is bigger than 0
         solver.add(self.RC.value <= self.mean + num_of_stds * self.var) #using gaussian mixture approx
 
+        solver.assert_and_track(self.RC.value >= 0, f"Pois lb for {self.RC.name}")
+        solver.assert_and_track(self.RC.value <= self.mean + num_of_stds * self.var, f"Pois up for {self.RC.name}")
 
     def sample(self):
         value = random.uniform(1, self.mean + 3*self.var)
