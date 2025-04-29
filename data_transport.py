@@ -173,10 +173,11 @@ def create_RC_object(choice_map, distribution_name, distribution_args, var_name,
         choice_map[var_name] = RC_Exponential(RC(var_name), param_in_cp(distribution_args[0], choice_map, variables))
 
     elif distribution_name == "categorical":
-    #     # TODO each array elem has to be converted to cp object
-    #     probabilities = as_array(distribution_args[0])
-        probabilities = [0,1,2]
-        choice_map[var_name] = RC_Categorical(RC(var_name), probabilities)
+        # TODO to allow arrays, each array elem has to be converted to cp object
+
+        #Assumes line is given as x ~ categorical([0.2,0.3, ...])
+        probabilities = [eval(part.strip('[] ')) for part in distribution_args]
+        choice_map[var_name] = RC_Categorical(RC(var_name, discrete = True), probabilities)
 
     else:
         raise Exception(f"{distribution_name} distribution not supported")

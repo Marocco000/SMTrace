@@ -259,6 +259,8 @@ function type_from_distribution(distr_expr)
         return :Real
     elseif distribution_name == "exponential"
         return :Real
+    elseif distribution_name == "categorical"
+        return :Int
     #TODO exhaustive
     else
         error("Unrecognized distribution: $distribution_name")
