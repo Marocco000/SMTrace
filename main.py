@@ -98,7 +98,7 @@ def copmute_trace_prob_estim_from_likelihood_dv(trace, choice_map, compound_func
 
     return pdfi
 
-def solver_opti_loop(solver, trace_prob, iter_resources = 1, log = False, plot=True):
+def solver_opti_loop(solver, trace_prob, iter_resources = 5, log = False, plot=True):
     '''Manual optimization loop that maximizes the trace probability'''
     #TODO: LOG decision variables
     #TODO: is this using incremental solving in th emain loop or restars CP??
@@ -114,23 +114,22 @@ def solver_opti_loop(solver, trace_prob, iter_resources = 1, log = False, plot=T
         if log:
             print(f"Model : {m}")
             print(f"Maximized trace_prob: {m[trace_prob]}")
-        # if plot:
-        #     plot_linear_regression(xs, ys, floaty(m[sloperc].as_decimal(20)), floaty(m[biasrc].as_decimal(20)),
-        #                        title=f"iter {iter}")
+
 
         # update trace_prob lower bound, use current model trace value as lower bound
-        # current = m[trace_prob].as_decimal(20)
-        # new_lower_bound = update_lower_bound(trace_prob, current, solver)
-        # if new_lower_bound:
-        #     if log:
-        #         print(f"new lower bound for trace probability found: {new_lower_bound}")
-        #     solver.add(trace_prob >= float(new_lower_bound))  # Add new bound as constraint
-        # else: # if no new lower bound can be found, optimization is done
-        #     break;
+        current = m[trace_prob].as_decimal(20)
+        new_lower_bound = update_lower_bound(trace_prob, current, solver)
+        if new_lower_bound:
+            if log:
+                print(f"new lower bound for trace probability found: {new_lower_bound}")
+            solver.add(trace_prob >= float(new_lower_bound))  # Add new bound as constraint
+        else: # if no new lower bound can be found, optimization is done
+            break;
+
         iter += 1
-        if iter %5 == 0:
+        if iter % 5 == 0:
             if m is not None:
-                save_model_solution(m, f"{config.run_dir}solver_results/intermediate/intermediate_solution{iter}.txt", likelihoods = True)
+                save_model_solution(m, f"solver_results/intermediate_solution{iter}.txt", likelihoods = True)
 
     print(f"Final Model: {m}")
     if m is not None:

@@ -32,7 +32,7 @@ function ransac_smt(observations, ppfile, with_block = true)
 
     # Run the julia parser
     # println("Running julia parser:")
-    # run(`julia context-parsing-gen-func-own.jl $ppfile $(RESULTS_DIR[])`)
+    run(`julia context-parsing-gen-func-own.jl $ppfile $(RESULTS_DIR[])`)
     # println("Julia parser complete!")
 
     # Incorporate observations
@@ -100,6 +100,31 @@ function smt_choices()
     end
 
     return choices
+end
+
+function reuse_warm_start()
+    """Little hack for easier benchmark. Take car ethat model is not taking random choices like for variance. Model has to be put at base of RESULTS_DIR """
+    # Populate a choice map object with the values returned by the SMT solver for the RC variables
+    choices = Gen.choicemap()  # Initialize empty choice map
+
+    # Open and read file containing latent variables and their values 
+    open(RESULTS_DIR[] * "solver_results/model_solution.txt", "r") do file
+        for line in eachline(file)
+            line = strip(line)  # Remove spaces/newlines
+            if occursin("=", line)  # Ensure it's a valid key-value pair
+                key, value = split(line, "=", limit=2)  # Split at first '='
+                choices[Symbol(strip(key))] = eval(Meta.parse(strip(value)))  # Convert value and store
+            end
+        end
+    end
+
+    if !isempty(choices) 
+        trace, weight = generate(ppmodel, (), choices)
+    
+        return trace
+    else 
+        return nothing
+    end
 end
 
 
@@ -172,12 +197,18 @@ end
 
 # end
 
-function block_smt(selection, tr, observations, ppfile)
+function block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+    return block_smt(fixed_selection, tr, observations, ppfile, true)
+end
+
+"""Runs the solver for the partial trace optimizing just for selection. The other variables will remain fixed in the current trace.
+In case reverse=true. Than the varibales in selection will remain fixed and the optimization will include all other variables."""
+function block_smt(selection, tr, observations, ppfile, reverse = false)
     
     set_current_run() #creats a new RUN_XX results folder
     
     # Get SMT trace that optimizes only on the addresses in selection 
-    block_constraints_smt(selection, tr, observations) # save values form trace for the addresses not in selection to be used as constraints.
+    block_constraints_smt(selection, tr, observations, reverse) # save values form trace for the addresses not in selection to be used as constraints.
     println(selection)
     
     block_tr = ransac_smt(observations, ppfile) # run smt with the obs + selection constriants
@@ -187,23 +218,19 @@ end
 # """Takes a selection of variables that should be resampled(optimized) together while assuming all others are fixed. 
 # This method takes the values of the respective not-selected addresses and prints the adr = value pairs in a file.
 # The respective file is going to be taken as constraints for finding optimal assignment of the selected addresses."""
-function block_constraints_smt(selection, tr, observations)
-    # for item in readdir(".")
-    #     println(item)
-    # end
-    # println()
-    # dirs = filter(name -> isdir(name), readdir("."))
-    # println(dirs)
+function block_constraints_smt(selection, tr, observations, reverse)
 
     open(RUN_DIR[] * "parsing_results/block.txt", "w") do file
 
         # Iterate over the selected choices and fix all other ones that are not already observations
         for choice in get_values_shallow(get_choices(tr))
             key = choice[1]    
-            if !(key in selection) && !Gen.has_value(observations, key)     
-                value = choice[2]
-                value = Float64(value) # in case its a bool result from Bernoulli  
-                println(file, "$key = $value")
+            if !Gen.has_value(observations, key)     
+                if (!reverse && !(key in selection)) || (reverse && key in selection) 
+                    value = choice[2]
+                    value = Float64(value) # in case its a bool result from Bernoulli  
+                    println(file, "$key = $value")
+                end
             end
         end
     end
