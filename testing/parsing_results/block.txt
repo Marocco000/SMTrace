@@ -1,8 +1,0 @@
-outlier20 = 0.0
-outlier19 = 0.0
-outlier5 = 0.0
-outlier9 = 1.0
-outlier10 = 1.0
-outlier8 = 1.0
-noise = 0.37094048839483584
-outlier2 = 0.0
