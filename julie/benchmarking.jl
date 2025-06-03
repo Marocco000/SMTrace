@@ -282,7 +282,7 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
     # - match and compare flavors with closest start point
     # - score progression comparison, +offset to shift away from negative values
 
-    savefig(combined_avg_scores_plot, RESULTS_DIR[] *"score-avg-progression-combined-jumps")
+    savefig(combined_avg_scores_plot, RESULTS_DIR[] *"figures/score-avg-progression-combined-jumps")
 
 end
 
