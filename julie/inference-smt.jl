@@ -8,7 +8,7 @@ module FlavorConfig
     Base.@kwdef mutable struct Inference_flavor
         warm_start::Bool = false
         warm_jump::Bool = false
-        gaussian_drift_res::Int64 = 100# Amount of Gaussian drifts to do after a warm-jump/warm-start
+        gaussian_drift_res::Int64 = 0# Amount of Gaussian drifts to do after a warm-jump/warm-start
     end
 
     const rand_start = Inference_flavor()
@@ -34,5 +34,8 @@ function inference_flavor_name(inference_flavor:: FlavorConfig.Inference_flavor)
         plot_name = plot_name * "-with-warm-jumps"
     end
 
+    if inference_flavor.gaussian_drift_res > 0
+        plot_name = plot_name * "with-" * string(inference_flavor.gaussian_drift_res) *"-drifts"
+    end
     return plot_name
 end

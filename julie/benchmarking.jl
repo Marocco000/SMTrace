@@ -1,4 +1,5 @@
 
+using Trapz
 include( "inference-smt.jl")
 
 """Tracking various information during """
@@ -17,7 +18,7 @@ function compare_warm_start_to_random_start(inference, data)
     warm_start = Inference_flavor(warm_start = true)
     inference_flavors = [rand_start, warm_start]
 
-    benchmark_score_progression(inference, data, inference_flavors, 20, 100) #TODO 20, 50
+    benchmark_score_progression(inference, data, inference_flavors, 0, 10) #TODO 20, 100
 end
 
 """Plots score progression for warm start and random start"""
@@ -41,7 +42,7 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
         scores::Vector{Vector{Float64}} = [] # tracks score progress for each inference 
         for i=1:rounds
             Random.seed!(i)
-            (scoring, _) = inference(data, flavor)
+            (scoring, _, _) = inference(data, flavor)
 
             push!(scores, scoring)
 
@@ -83,6 +84,9 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
         # print(scor# Confidence intervals (95%)
         ci_upper = mean_vals .+ 1.96 .* se_vals
         ci_lower = mean_vals .- 1.96 .* se_vals
+
+        compute_auc_values(mean_vals, plot_name)
+        
 
         # Plot individual score progression for inference flavor
         pavg_individual = plot(mean_vals,
@@ -159,6 +163,24 @@ function plot_combined_score_progression(scores1, scores2, name1, name2,  run)
         ylabel="Score", ylims = (min_y, max_y))
 
     savefig(combined_score_progression, RESULTS_DIR[] * "figures/runpairs/$(run-1)/" *"combined-score-progression-start"*"$run")
+end
+
+function compute_auc_values(mean_scores, plot_name)
+    #AUC values
+    # full
+    auc = trapz(1:length(mean_scores), mean_scores)
+    
+    # early-stage auc
+    window = 1:500
+    auc500 = trapz(window, mean_scores[window])
+
+    open(RESULTS_DIR[] * "auc2000"*plot_name*".txt", "w") do file
+        print(file, auc)
+    end
+
+    open(RESULTS_DIR[] * "auc500"*plot_name*".txt", "w") do file
+        print(file, auc500)
+    end
 end
 
 

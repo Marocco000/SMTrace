@@ -15,7 +15,25 @@ include(logg)
 bench = joinpath("..", "..", "julie", "benchmarking.jl")
 include(bench)
 
+mutable struct Tracker
+    scores::Vector{Float64}
+    jumps::Vector{Int64} #Bool
+    drifts::Vector{Int64}
+    mh_steps::Int
+end
 
+function update!(t::Tracker, score, is_drift, is_jump)
+    push!(t.scores, score)
+    push!(t.drifts, is_drift)
+    push!(t.jumps, is_jump)
+    t.mh_steps += 1
+end
+
+function trim!(t::Tracker, cap=2000)
+    t.scores = t.scores[1:cap]
+    t.jumps = t.jumps[1:cap]
+    t.drifts = t.drifts[1:cap]
+end
 
 function make_synthetic_data(n)
     #to implement
@@ -40,7 +58,6 @@ function make_synthetic_data(n)
     end
 
     ys
-
 end
 
 function make_constraints(ys)::Gen.ChoiceMap
@@ -57,44 +74,44 @@ end
 
 
 
-function get_data_and_observations()
+function get_data_and_observations(n)
 
-    data = make_synthetic_data(100)
+    data = make_synthetic_data(n)
     observations = make_constraints(data)
     
-    data = []
+    data = Dict("n"=>n)
 
     return (data, observations)
 end
 
-function inference(data, infer_flavor::Inference_flavor, iter=50)
-    # to implement
-
-    scores = []# trace scores for plot 
-    jumps = []# true if the sample used an SMT trace
-    drifts = []
+function inference(data, infer_flavor::Inference_flavor)
+    # Track score progression and mh steps (drifts, smt-driven)
+    tracker = Tracker(Float64[], [], [], 0)
 
     # Initial guess
     if infer_flavor.warm_start
-        # init_trace = ransac_smt(observations, ppfile, false)
+        #init_trace = ransac_smt(observations, ppfile, false)
         init_trace = reuse_warm_start()
         
         gaussian_drift_resources = infer_flavor.gaussian_drift_res # set resources after smt start
-        log_jump(jumps, true)
+        update!(tracker, get_score(init_trace), false, true)
     else
         (init_trace, _) = generate(ppmodel, (),  observations)
 
         gaussian_drift_resources = 0
-        log_jump(jumps, false)
+        update!(tracker, get_score(init_trace), false, false)
     end
 
     tr = deepcopy(init_trace)
-    log_score(scores, tr)
-    log_drift(drifts, false)
+
+
+    println("INIT SCORE: $(get_score(tr))")
     
+    mh_steps_cap = 2000
+
     # Sample iterations
-    for j = 1:iter
-        if infer_flavor.warm_jump && j % 2 == 0 && j<=6
+    while tracker.mh_steps <= mh_steps_cap
+        if infer_flavor.warm_jump && j % 2 == 0 && j<=2 
             # perform warm_jump if possible
             fixed_selection_options = [select(:mean1, :mean2), select(:mean3, :mean2), select(:mean1, :mean3)]
             fixed_selection = fixed_selection_options[Int(j/2)]
@@ -102,9 +119,12 @@ function inference(data, infer_flavor::Inference_flavor, iter=50)
             if try_tr === nothing
                 iter += 1
             else 
-                log_score(scores, tr)
-                log_jump(jumps, true)
-                log_drift(drifts, false)
+                tr = try_tr
+                println("Pre-jump score $(get_score(tr))")
+                println("JUMP SCORE: $(get_score(tr))")
+
+
+                update!(tracker, get_score(tr), false, true)        
                 gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
             end
             # Options: try to improve only on e of the means and the allocations, add less resources
@@ -114,19 +134,13 @@ function inference(data, infer_flavor::Inference_flavor, iter=50)
 
             #Gaussian drift over each means #TODO can i de-duplicate?
             (tr, _) = mh(tr, mean1_drift_proposal, ())
-            log_score(scores, tr)
-            log_jump(jumps, false)
-            log_drift(drifts, true)
+            update!(tracker, get_score(tr), true, false)
 
             (tr, _) = mh(tr, mean2_drift_proposal, ())
-            log_score(scores, tr)
-            log_jump(jumps, false)
-            log_drift(drifts, true)
+            update!(tracker, get_score(tr), true, false)
 
             (tr, _) = mh(tr, mean3_drift_proposal, ())
-            log_score(scores, tr)
-            log_jump(jumps, false)
-            log_drift(drifts, true)
+            update!(tracker, get_score(tr), true, false)
             # TODO: option Throw zi -> zi-1 or zi+1? assume u could put point in neighbouring piles
 
             gaussian_drift_resources -= 1
@@ -135,30 +149,33 @@ function inference(data, infer_flavor::Inference_flavor, iter=50)
             # perform standard inference (mh, block resim mh, etc)
 
             #block1: update means
-            # (tr, ) = mh(tr, select(:mean1, :mean2, :mean3))
             (tr, ) = mh(tr, select(:mean1))
-            (tr, ) = mh(tr, select(:mean2))
-            (tr, ) = mh(tr, select(:mean3))
+            update!(tracker, get_score(tr), false, false)
             
-            log_score(scores, tr)
-            log_jump(jumps, false)
-            log_drift(drifts, false)
+            (tr, ) = mh(tr, select(:mean2))
+            update!(tracker, get_score(tr), false, false)
+
+            (tr, ) = mh(tr, select(:mean3))
+            update!(tracker, get_score(tr), false, false)
 
             #block2: update cluster assignments
-            for i=1:100
+            for i=1:data["n"]
                 zi = QuoteNode(Symbol(:z, i))
                 selection = select(eval(zi))
                 (tr, _) = mh(tr, selection)
-
-                log_score(scores, tr)
-                log_jump(jumps, false)
-                log_drift(drifts, false)
+                update!(tracker, get_score(tr), false, false)
             end
             
         end
     end
 
-    return (scores, jumps, drifts)
+  
+
+    #Cap scores at 2000 mh steps
+    trim!(tracker, 2000)
+
+    # return (scores, jumps, drifts)
+    return (tracker.scores, tracker.jumps, tracker.drifts)
 
 end
 
