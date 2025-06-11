@@ -49,6 +49,10 @@ def take_model_from_files(solver):
 
     # Add bounds to the latent RC variables (eg. uniform[3,5] -> 3 <= x <= 5)
     add_bounds_to_latent_RC_vars(solver, choice_map)
+    # Add likelihood computaiton decision variabels
+    add_likelihood_dv(choice_map, solver)
+
+    add_branch_alternatives_logic(choice_map, solver)
 
     print("\nMODEL BEFORE OPTI\n")
     f = open(config.run_dir + "solver_results/pymodel.txt", "w")
@@ -244,6 +248,36 @@ def read_model_from_dump(solver, var_choices):
             trace.append(var)
 
     return choice_map, trace
+
+
+def add_branch_alternatives_logic(choice_map, solver):
+    # Naive scheme for dealing with branch alternatives: collecting and aggregating alternatives for a RC with stchastic existance
+    for var in choice_map.keys():
+        if isinstance(choice_map[var], RC_Unknown):
+            # there are multiple alternatives for the current variable
+            alive_unknown = False  # main is alive if any of the alternatives are alive
+            for alt in choice_map.keys():
+                if alt.startswith(f"{var}_"):
+                    # if alternative is alive, main takes likelihood and value of alternative
+                    solver.add(z3.Implies(choice_map[alt].alive == True,
+                                          z3.And(choice_map[var].likelihooddv == choice_map[alt].likelihooddv,
+                                                 choice_map[var].RC.value == choice_map[alt].RC.value), True))
+                    solver.add(z3.Implies(choice_map[alt].alive == False,
+                                          choice_map[alt].likelihooddv == 0))  # TODO CHECKK !!!!
+                    # compute maine alive recursively:  if any of the alternatives are alive
+                    alive_unknown = z3.Or(alive_unknown, choice_map[alt].alive)
+
+            # main is alive if any of the alternatives are alive
+            solver.add(choice_map[var].alive == alive_unknown)
+
+
+def add_likelihood_dv(choice_map, solver):
+    # Set correct likelihooddv: for all RC distributions that are known
+    for var in choice_map.keys():
+        if not isinstance(choice_map[var], RC_Unknown):
+            solver.add(choice_map[var].likelihooddv == choice_map[var].estim_likelihood(choice_map[var].RC.value))
+    # For unknown RCs, likelihood depends on the stochastic alternatives
+
 
 def save_SMT_LIB_standard_model(solver, file = "smtmodels/simplepp_model_SMTLIB.smt2"):
     """Saves a model in SMT-LIB standard format."""
