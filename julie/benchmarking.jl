@@ -42,7 +42,9 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
         scores::Vector{Vector{Float64}} = [] # tracks score progress for each inference 
         for i=1:rounds
             Random.seed!(i)
-            (scoring, _, _) = inference(data, flavor)
+            # (scoring, _, _) = inference(data, flavor)
+            tracker = inference(data, flavor)
+            scoring = tracker.scores
 
             push!(scores, scoring)
 
@@ -316,15 +318,16 @@ end
 
 """Runs benchmarking comparison for warm-start and random_start inference"""
 function compare_warm_start_with_drifts(inference, data)
+    drift_phase = 100
     warm_start = Inference_flavor(warm_start = true, gaussian_drift_res=0)
-    warm_start_with_drift = Inference_flavor(warm_start = true)
-    inference_flavors = [warm_start, warm_start_with_drift]
+    warm_start_with_drift1 = Inference_flavor(warm_start = true, gaussian_drift_res=drift_phase)
+    inference_flavors = [warm_start, warm_start_with_drift1]
 
-    benchmark_score_progression_with_drifts(inference, data, inference_flavors, 20, 100) #TODO 20, 50
+    benchmark_score_progression_with_drifts(inference, data, inference_flavors, 0, 100, drift_phase) #TODO 20, 50
 end
 
 """Plots score progression for warm start and random start"""
-function benchmark_score_progression_with_drifts(inference, data,  inference_flavors, burn_in=10, rounds=50)
+function benchmark_score_progression_with_drifts(inference, data,  inference_flavors, burn_in, rounds, drift_phase)
 
     colors = [:orange, :blue, :green, :black, :red, :magenta] 
     combined_avg_scores_plot = plot(title="Score progression with 95% confidence interval", xlabel="Sample index", ylabel="Score")
@@ -332,6 +335,7 @@ function benchmark_score_progression_with_drifts(inference, data,  inference_fla
     # Collect score progress for inference with different start flavors
     flavored_scores = []
     flavored_drifts = []
+    flavored_accepted = []
     for (ii, flavor) in enumerate(inference_flavors) #Compare inference flavors
 
         Random.seed!() # Reset burn-in seed to random
@@ -344,17 +348,23 @@ function benchmark_score_progression_with_drifts(inference, data,  inference_fla
         # Runs inference algorithm #rounds times and collects score progression
         scores::Vector{Vector{Float64}} = [] # tracks score progress for each inference 
         drifties::Vector{Vector{Float64}} = [] # tracks score progress for each inference 
+        accepted::Vector{Int64} = Int64[]
         for i=1:rounds
             Random.seed!(i)
-            (scoring, _, drifts) = inference(data, flavor)
+            # (scoring, _, drifts) = inference(data, flavor)
+            tracker = inference(data, flavor)
+            scoring = tracker.scores
+            drifts = tracker.drifts
+
+            accepts = count(identity, tracker.accepted[1:drift_phase])#count number of accepted (=true) MH proposals
 
             push!(scores, scoring)
             push!(drifties, drifts)
-
+            push!(accepted, accepts)
         end
         push!(flavored_scores, scores)
         push!(flavored_drifts, drifties)
-
+        push!(flavored_accepted, accepted)
 
         
     end
@@ -390,6 +400,15 @@ function benchmark_score_progression_with_drifts(inference, data,  inference_fla
         mean_vals = mean(score_matrix, dims=1) |> vec
         se_vals = std(score_matrix, dims=1) ./ sqrt(size(score_matrix, 1)) |> vec
         
+        open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "w") do file
+            println(file, "avg init :$(mean_vals[1])")
+            println(file, "window-end-avg: $(mean_vals[drift_phase])")
+            println(file, "avg last :$(mean_vals[length(mean_vals)])")
+
+            accepted = flavored_accepted[i]
+            println(file, "avg acceptance in window (%): $(mean(accepted))")
+        end
+
         # print(scor# Confidence intervals (95%)
         ci_upper = mean_vals .+ 1.96 .* se_vals
         ci_lower = mean_vals .- 1.96 .* se_vals
@@ -400,6 +419,8 @@ function benchmark_score_progression_with_drifts(inference, data,  inference_fla
             label="Mean ± 95% CI" * plot_name,
             lw=2, fillalpha=0.3, color=colors[i], 
             xlabel="Sample index", ylabel="Score", title="Score Progression with 95% Confidence Interval")
+        
+        vline!([drift_phase], line = (:black, :dot), label = "drift cutoff")
         savefig(pavg_individual, RESULTS_DIR[] * "figures/" *"score-avg-progression-"*plot_name)
         
         #Plot score progression for comparison
@@ -413,6 +434,7 @@ function benchmark_score_progression_with_drifts(inference, data,  inference_fla
     #Plotting options: 
     # - match and compare flavors with closest start point
     # - score progression comparison, +offset to shift away from negative values
+    vline!(combined_avg_scores_plot, [drift_phase], line = (:black, :dot), label = "drift cutoff")
 
     savefig(combined_avg_scores_plot, RESULTS_DIR[] * "figures/" * "score-avg-progression-combined-drifts")
 
