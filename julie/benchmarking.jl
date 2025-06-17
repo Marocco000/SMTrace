@@ -18,7 +18,7 @@ function compare_warm_start_to_random_start(inference, data)
     warm_start = Inference_flavor(warm_start = true)
     inference_flavors = [rand_start, warm_start]
 
-    benchmark_score_progression(inference, data, inference_flavors, 0, 10) #TODO 20, 100
+    benchmark_score_progression(inference, data, inference_flavors, 0, 100) #TODO 20, 100
 end
 
 """Plots score progression for warm start and random start"""
@@ -87,8 +87,24 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
         ci_upper = mean_vals .+ 1.96 .* se_vals
         ci_lower = mean_vals .- 1.96 .* se_vals
 
-        compute_auc_values(mean_vals, plot_name)
-        
+        #AUC vlaues
+        (auc500, auc) = compute_auc_values(mean_vals, plot_name)
+
+        #Surpass steps for baseline 
+        if (i == 1) # rand start
+            #how long till u get something as good as smt initial 
+            smt_init_score = flavored_scores[2][1][1]
+            catchup_steps = steps_to_surpass(mean_vals, smt_init_score)
+            open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "a") do file
+                println(file, "surpass steps :$catchup_steps")
+            end
+        end
+
+        open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "a") do file
+            println(file, "avg init :$(mean_vals[1])")
+            println(file, "avg last :$(mean_vals[length(mean_vals)])")
+        end
+
 
         # Plot individual score progression for inference flavor
         pavg_individual = plot(mean_vals,
@@ -112,6 +128,17 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
 
     savefig(combined_avg_scores_plot, RESULTS_DIR[] * "figures/" * "score-avg-progression-combined-warm-vs-rand-start")
 
+end
+
+
+"""Searches the amount of MH proposals in a score prorgession to reach/surpass a certian score x. """
+function steps_to_surpass(scores::AbstractVector{<:Real}, x::Real)
+    for (i, score) in enumerate(scores)
+        if score >= x
+            return i  # Index at which score first exceeds x
+        end
+    end
+    return length(scores) + 1  # If never surpassed
 end
 
 function plot_individual_score_progression(scores, plot_name, i, color)
@@ -176,13 +203,14 @@ function compute_auc_values(mean_scores, plot_name)
     window = 1:500
     auc500 = trapz(window, mean_scores[window])
 
-    open(RESULTS_DIR[] * "auc2000"*plot_name*".txt", "w") do file
-        print(file, auc)
+      #Print inference stats:
+      open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "w") do file
+        println(file, "AUC:$auc")
+        println(file, "early AUC:$auc500")
+        print(file, )
     end
 
-    open(RESULTS_DIR[] * "auc500"*plot_name*".txt", "w") do file
-        print(file, auc500)
-    end
+    return (auc500, auc)
 end
 
 
