@@ -113,7 +113,7 @@ end
 
 function inference(data, infer_flavor::Inference_flavor)
     # Track score progression and mh steps (drifts, smt-driven)
-    tracker = Tracker(Float64[], [], [], 0)
+    tracker = new_tracker()
 
     # Initial guess
     if infer_flavor.warm_start
@@ -155,9 +155,9 @@ function inference(data, infer_flavor::Inference_flavor)
         #         gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
         #     end
         #     # Options: try to improve only on e of the means and the allocations, add less resources
-
-        # elseif (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
-        #     # perform gaussian drifts post smt trace
+        #elseif...
+        # if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+            #Drift MH proposals
 
         #     #Gaussian drift over each means #TODO can i de-duplicate?
         #     (tr, _) = mh(tr, mean1_drift_proposal, ())
@@ -170,45 +170,80 @@ function inference(data, infer_flavor::Inference_flavor)
         #     update!(tracker, get_score(tr), true, false)
         #     # TODO: option Throw zi -> zi-1 or zi+1? assume u could put point in neighbouring piles
 
+
         #     gaussian_drift_resources -= 1
 
         # else 
             # perform standard inference (mh, block resim mh, etc)
             #block1: update sigmas
-            (tr, ) = mh(tr, select(:sigmaxstate))
+            (tr, a) = mh(tr, select(:sigmaxstate))
             update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
 
-            (tr, ) = mh(tr, select(:sigmaxdistrict))
+            (tr, a) = mh(tr, select(:sigmaxdistrict))
             update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
 
-            (tr, ) = mh(tr, select(:sigmaxtype))
+            (tr, a) = mh(tr, select(:sigmaxtype))
             update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
         
 
             #block2: update betas
             for s=1:data["num_states"]
                 beta_statei = QuoteNode(Symbol(:betaxstate, s))
                 selection = select(eval(beta_statei))
-                (tr, _) = mh(tr, selection)
-                update!(tracker, get_score(tr), false, false)
+
+                if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+                    latent = eval(beta_statei) 
+                    (tr, a) = mh(tr, beta_state_drift_proposal, (latent, ))   
+                    update!(tracker, get_score(tr), true, false)
+                    accepted!(tracker, a)
+                    gaussian_drift_resources -= 1
+                else
+                    (tr, a) = mh(tr, selection)
+                    update!(tracker, get_score(tr), false, false)
+                    accepted!(tracker, a)
+                end                
             end
 
             for s=1:data["num_states"] 
                 for d=1:data["num_districts_per_state"]
                     # beta_districti = QuoteNode(Symbol(:betaxdistrict, i)) #TODO
-                    beta_districti = QuoteNode(Symbol(":betaxdistrict$(s)TO$(d)")) #TODO
-                    Symbol("beta_district$(s)_$(d)")
+                    beta_districti = QuoteNode(Symbol(":betaxdistrict$(s)To$(d)")) #TODO
                     selection = select(eval(beta_districti))
-                    (tr, _) = mh(tr, selection)
-                    update!(tracker, get_score(tr), false, false)
+
+                    if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+                        latent = Symbol("betaxdistrict$(s)To$(d)")
+                        (tr, a) = mh(tr, beta_district_drift_proposal, (latent, ))
+
+                        update!(tracker, get_score(tr), true, false)
+                        accepted!(tracker, a)
+                        gaussian_drift_resources -= 1
+                    else
+                        (tr, a) = mh(tr, selection)
+                        update!(tracker, get_score(tr), false, false)
+                        accepted!(tracker, a)
+                    end
                 end
             end
 
             for i=1:data["num_types"]
                 beta_typei = QuoteNode(Symbol(:betaxtype, i))
                 selection = select(eval(beta_typei))
-                (tr, _) = mh(tr, selection)
-                update!(tracker, get_score(tr), false, false)
+
+                if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+                    latent = eval(beta_typei)
+                    (tr, a) = mh(tr, beta_type_drift_proposal, (latent, ))
+
+                    update!(tracker, get_score(tr), true, false)
+                    accepted!(tracker, a)
+                    gaussian_drift_resources -= 1
+                else
+                    (tr, a) = mh(tr, selection)
+                    update!(tracker, get_score(tr), false, false)
+                    accepted!(tracker, a)
+                end
             end
             
         # end
@@ -226,15 +261,22 @@ function inference(data, infer_flavor::Inference_flavor)
 end
 
 # Gaussian drifts:
-@gen function mean1_drift_proposal(current_trace)
-    mean1 ~ normal(current_trace[:mean1], 0.01)
+
+@gen function beta_state_drift_proposal(current_trace, latent)
+    @trace(normal(current_trace[latent], 0.1), latent)
 end
-@gen function mean2_drift_proposal(current_trace)
-    mean2 ~ normal(current_trace[:mean2], 0.01)
+
+@gen function beta_district_drift_proposal(current_trace, latent)
+    @trace(normal(current_trace[latent], 0.1), latent)
 end
-@gen function mean3_drift_proposal(current_trace)
-    mean3 ~ normal(current_trace[:mean3], 0.01)
+
+@gen function beta_type_drift_proposal(current_trace, latent)
+    @trace(normal(current_trace[latent], 0.1), latent)
 end
+#     @gen function bernoulli_outlier_proposal(current_trace, latent)
+#     p = current_trace[latent] ? 0.6 : 0.5
+#     @trace(bernoulli(p), latent)
+# end  
 
 
 
