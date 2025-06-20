@@ -13,18 +13,19 @@ include(joinpath("..", "..", "julie", "benchmarking.jl"))
 
 # Data and observations
 n = 100
-(data, observations) = get_data_and_observations()
+(data, observations) = get_data_and_observations(n)
 
-warmstart = Inference_flavor(warm_start=true)
-inference(data, warmstart)
-
+# warmstart = Inference_flavor(warm_start=true)
+# (s, d, j) = inference(data, warmstart)
+# println("initi: $(s[1])")
+# INIT SC5RE: -53.76211833783415
 
 # BENCHMARKS
 #Compare warm-start to warm-jump 
-# compare_warm_start_to_random_start(inference, data)
+#  compare_warm_start_to_random_start(inference, data)
 
 #Compare warm start with and without gaussian drifts 
-# compare_warm_start_with_drifts(inference, data)
+compare_warm_start_with_drifts(inference, data)
 
 #Visualise warm-jumps
-compare_jumps_to_no_jumps(inference, data)
+# compare_jumps_to_no_jumps(inference, data)
