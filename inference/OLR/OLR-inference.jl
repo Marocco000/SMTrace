@@ -17,14 +17,17 @@ include(logg)
 bench = joinpath("..", "..", "julie", "benchmarking.jl")
 include(bench)
 
+include(joinpath("..", "..", "julie", "mh_tracker.jl"))
+
+
 #Plotting
 using Plots
 using Statistics
 path = joinpath( "regression_viz.jl")
 include(path)
 
-# Plots and results_dir
-results_dir = joinpath(pwd(), "inference", "OLR", "res/")
+# # Plots and results_dir
+# results_dir = joinpath(pwd(), "inference", "OLR", "res/")
 
 
 ## DATA
@@ -40,7 +43,8 @@ function make_synthetic_dataset(n)
     xs = collect(range(-5, stop=5, length=n))
     ys = Float64[]
     for (i, x) in enumerate(xs)
-        if rand() < prob_outlier
+        outlier = rand()
+        if outlier < prob_outlier
             y = randn() * true_outlier_noise
         else
             y = true_slope * x + true_intercept + randn() * true_inlier_noise
@@ -49,46 +53,16 @@ function make_synthetic_dataset(n)
     end
     (xs, ys)
 end
-    
+
 
 
 function make_constraints(ys::Vector{Float64})
     constraints = Gen.choicemap()
-    # for i=1:length(ys)
-    #     constraints[:data => i => :y] = ys[i]
-    # end
 
     for i=1:length(ys)
         yi = QuoteNode(Symbol(:y, i))
         constraints[eval(yi)] = ys[i]
     end
-
-    #linear regression observations TODO howwww
-    # TODO: again problem with geenrating code, i need the name and ref to the address
-    # for i = 1:lenght(ys)
-    #     constraints[yi]
-    # end
-
-    #     y1 = 2.6573837689159814
-    #     y2 = 7.702179877517962
-    #     y3 = 6.081150630367074
-    #     y4 = 5.008042235619298
-    #     y5 = 4.730169919177062
-    #     y6 = 4.959542404331658
-    #     y7 = 3.8408261728807407
-    #     y8 = 3.581811690993659
-    #     y9 = 0.10122966946595927
-    #     y10 = 2.3093030917112363
-    #     y11 = 1.114208947120075
-    #     y12 = 1.579562816549691
-    #     y13 = 1.460511864881077
-    #     y14 = 1.2188854648088319
-    #     y15 = -1.0634788926558225
-    #     y16 = -1.1333844328209919
-    #     y17 = -0.6478476691012588
-    #     y18 = -1.7134940283536377
-    #     y19 = 2.9220620949510896
-    #     y20 = -7.992466952018953
 
     constraints
 end;
@@ -98,7 +72,7 @@ end;
 function get_data_and_observations()
 
     #Generate synthetic data
-    (xs, ys) = make_synthetic_dataset(20);
+    (xs, ys) = make_synthetic_dataset(100);
     
     #Pack data (parameter for the inference procedure)
     data = [xs]
@@ -109,22 +83,16 @@ function get_data_and_observations()
 end
 
 
-@gen function line_proposal(current_trace)
-    # Since SMT trace is pretty good, propose small changes, adapt noise 
-    slope ~ normal(current_trace[:slope], 0.01)
-    intercept ~ normal(current_trace[:intercept],0.01)
-end;
-
-"""Performs a Gaussian drift over the trace returned by the SMT solver"""
-function smt_and_gaussian_drift()
-    # SMT trace as warm start
-    init_trace = ransac_smt(observations, ppfile, false) #TODO (observations are not done here, for now they are hacked in as constants in the ppmodel)
+# """Performs a Gaussian drift over the trace returned by the SMT solver"""
+# function smt_and_gaussian_drift()
+#     # SMT trace as warm start
+#     init_trace = ransac_smt(observations, ppfile, false) #TODO (observations are not done here, for now they are hacked in as constants in the ppmodel)
     
-    #Gaussian drift over the smt trace 
-    (init_trace, did_accept) = mh(init_trace, line_proposal, ())
+#     # #Gaussian drift over the smt trace 
+#     # (init_trace, did_accept) = mh(init_trace, line_proposal, ())
 
-    init_trace
-end
+#     init_trace
+# end
 
 """Inference method for the OLR model"""
 function inference(data, infer_flavor::Inference_flavor, iter = 10)
@@ -144,43 +112,36 @@ Inference function
 """
 function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, iter = 10)
     
-    scores = []# trace scores for plot 
-    is_a_jump = []
-
-    current_gaussian_resources = 0
-
+    tracker = new_tracker()
+ 
     # Initial guess
     if infer_flavor.warm_start
         # Warm start using the SMT trace
-        init_trace = smt_and_gaussian_drift()
-        push!(is_a_jump, true)
-        current_gaussian_resources = infer_flavor.gaussian_drift_res
+        # init_trace = smt_and_gaussian_drift()
+        # init_trace = ransac_smt(observations, ppfile, false)
+        init_trace = reuse_warm_start()
+
+        update!(tracker, get_score(init_trace), false, true)
+        gaussian_drift_resources = infer_flavor.gaussian_drift_res
 
     else 
         #Random start
         (init_trace, _) = generate(ppmodel, (),  observations)
-        push!(is_a_jump, false)
+        update!(tracker, get_score(init_trace), false, true)
+
+        gaussian_drift_resources = 0
     end
     tr = deepcopy(init_trace)
-
-
     
-    push!(scores, get_score(init_trace))
     println("Initial score: $(get_score(init_trace))")
 
-    besttr = tr
-    bestscore = get_score(tr)
-
-    # for j=1:50
-    #     #Gaussian drift over the smt trace 
-    #     (init_trace, did_accept) = mh(init_trace, line_proposal, ())
-    #     log_trace(scores, tr, besttr)
-    # end
-
     # block resimulation
-    for j=1:iter
+    mh_steps_cap = 2000
+
+    # Sample iterations
+    while tracker.mh_steps <= mh_steps_cap
       
-        if infer_flavor.warm_jump && (j == 2 || j == 4)#%7 == 0 #TODO add frequency j%infer_flavor.warm_jump_frequency == 0
+        if infer_flavor.warm_jump #TODO add frequency j%infer_flavor.warm_jump_frequency == 0
             #Perform warm jump (fully with diversity or for random block)
             # if j == 2
             #     params = select(:outlier1)
@@ -195,70 +156,75 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
             else 
                 tr = tr_try
                 #reset gaussian drift resources
-                current_gaussian_resources = infer_flavor.gaussian_drift_res
+                gaussian_drift_resources = infer_flavor.gaussian_drift_res
 
-                log_trace(scores, tr, besttr)
-                #mark as warm_jump
-                push!(is_a_jump, true)
+                update!(tracker, get_score(tr), false, true)
             end
-        else 
-            # Block 1: Update the line's parameters
+        elseif (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+            #Gaussian drift phase 
+
+            (tr, a) = mh(tr, line_proposal, ())
+            update!(tracker, get_score(tr), true, false)
+            accepted!(tracker, a)
+            gaussian_drift_resources -= 1
+            
+            for i=1:100 #TODO not hardcoded
+                outlier_i = QuoteNode(Symbol(:outlier, i))
+                selection = select(eval(outlier_i))
+                
+                # normal resample
+                (tr, a) = mh(tr, selection) 
+                update!(tracker, get_score(tr), false, false)
+
+                #drift resample of bernoulli
+                # latent = eval(outlier_i)
+                # (tr, a) = mh(tr, bernoulli_outlier_proposal, (latent,) )
+                # update!(tracker, get_score(tr), true, false)
+
+                accepted!(tracker, a)
+                # gaussian_drift_resources -= 1
+            end
+
+            (tr, a) = mh(tr, select(:proboutlier))
+            update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
+
+        else
+            # Standard inference
+
+            #Block 1: Update the line's parameters
             line_params = select( :slope, :intercept) #reintroduce noise here TODO
-            
-            if  current_gaussian_resources  > 0 && (infer_flavor.warm_start || infer_flavor.warm_jump)
-                (tr, did_accept) = mh(tr, line_proposal, ())
-                current_gaussian_resources -= 1
+            (tr, a) = mh(tr, line_params)
 
-            else
-                (tr, _) = mh(tr, line_params)
-            end
-            
-            log_trace(scores, tr, besttr)
-            push!(is_a_jump, false)
-
-           
+            update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
 
             # Blocks 2-N+1: Update the outlier classifications
             # (xs,) = get_args(tr)
             # n = length(xs)
-            for i=1:20
-                yi = QuoteNode(Symbol(:outlier, i))
-                selection = select(eval(yi))
-                (tr, _) = mh(tr, selection)
-                log_trace(scores, tr, besttr)
-                push!(is_a_jump, false)
-
-                #block smt TODO this should have a fast result as its a bernoulli choice, check this
-                # if infer_flavor.warm_jump && j%7 == 0 && i%7 == 0
-                #     tr = block_smt(selection, tr, observations, ppfile)
-                    
-                # end
+            for i=1:100 #TODO not hardcoded
+                outlier_i = QuoteNode(Symbol(:outlier, i))
+                selection = select(eval(outlier_i))
+                (tr, a) = mh(tr, selection)
+                update!(tracker, get_score(tr), false, false)
+                accepted!(tracker, a)
             end
             
             # Block N+2: Update the prob_outlier parameter
-            (tr, _) = mh(tr, select(:proboutlier))
-            log_trace(scores, tr, besttr)
-            push!(is_a_jump, false)
+            (tr, a) = mh(tr, select(:proboutlier))
+            update!(tracker, get_score(tr), false, false)
+            accepted!(tracker, a)
 
-
-        end
-
-
-        if get_score(tr) > bestscore
-            bestscore = get_score(tr)
-            besttr = deepcopy(tr)
         end
     end
 
     # Plots 
-    # plot_line(infer_flavor, init_trace, tr, besttr)
+    # plot_line(infer_flavor, init_trace, tr, tr)
     # plot_score_progression(infer_flavor, scores)
+    #Cap scores at 2000 mh steps
+    trim!(tracker, mh_steps_cap)
 
-    println("last score $(scores[end])")
-    
-    # println("JUMPS")
-    # println(is_a_jump)
-    return (scores, is_a_jump)
+    return tracker
 end
 
 function plot_line(infer_flavor, init_trace, tr, besttr)
@@ -269,7 +235,7 @@ function plot_line(infer_flavor, init_trace, tr, besttr)
                 visualize_trace(tr, title="last trace"), 
                 visualize_trace(besttr, title="best trace")
                 ]...)
-    savefig(p, results_dir *"OLR-$plot_name.png")
+    savefig(p, RESULTS_DIR[] *"OLR-$plot_name.png")
 
     # p = Plots.plot([visualize_trace(init_trace, title="SMT (init) trace"), 
     #         visualize_trace(tr, title="last trace")
@@ -295,4 +261,22 @@ function plot_score_progression(infer_flavor, scores)
     savefig(scoring_plot, results_dir *"score-"*plot_name)
 
 end
+
+@gen function line_proposal(current_trace)
+    slope ~ normal(current_trace[:slope], 0.1)
+    intercept ~ normal(current_trace[:intercept],0.1)
+end
+
+@gen function slope_proposal(current_trace)
+    slope ~ normal(current_trace[:slope], 0.01)
+end
+
+@gen function intercept_proposal(current_trace)
+    intercept ~ normal(current_trace[:intercept],0.01)
+end
+
+@gen function bernoulli_outlier_proposal(current_trace, latent)
+    p = current_trace[latent] ? 0.8 : 0.3
+    @trace(bernoulli(p), latent)
+end    
 

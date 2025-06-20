@@ -17,14 +17,20 @@ function make_synthetic_dataset1(n)
     end
     (xs, ys)
 end
-    
-(xs, ys) = make_synthetic_dataset1(20);
-# Plots.scatter(xs, ys, color="black", xlabel="X", ylabel="Y", 
+n = 100 # 20
+(xs, ys) = make_synthetic_dataset1(n);
+# Plots.scatter(xs, ys, color="black", xlabel="X", ylabel="Y",
 #               label=nothing, title="Observations - regular data and outliers")
-for i = 1:20
+for i = 1:n
     println("x$i = $(xs[i])")
 end
 
-for i = 1:20
-    println("y$i = $(ys[i])")
+for i in 1:n
+    println("outlier$i ~ bernoulli(proboutlier)")
+    println("if outlier$i == 0")
+    println("    mean$i = x$i * slope + intercept")
+    println("    y$i ~ normal(mean$i, noise)")
+    println("else")
+    println("    y$i ~ normal(0, 10)")
+    println("end\n")
 end

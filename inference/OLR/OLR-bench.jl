@@ -25,12 +25,19 @@ xs = data[1] # TODO unpack this properly
 # print("\033c") # clean terminal log
 
 # Perform benchmarks
+warm_start = Inference_flavor(warm_start = true)
+inference(data, warm_start)
+
 
 #Compare warm-start to warm-jump 
 # compare_warm_start_to_random_start(inference, data)
 
+#Gaussian drift window post warm start
+compare_warm_start_with_drifts(inference, data)
+
+
 #Visualise warm-jumps
-compare_jumps_to_no_jumps(inference, data)
+# compare_jumps_to_no_jumps(inference, data)
 
 #Test block jump ios working because getting no model 
 # with_jumps = Inference_flavor(warm_jump=true)
