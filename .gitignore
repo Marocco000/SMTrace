@@ -1,2 +1,5 @@
 /inference/OLR/results
 /inference/*/results
+
+*.txt
+*.png

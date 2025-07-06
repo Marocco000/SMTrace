@@ -88,14 +88,14 @@ function benchmark_score_progression(inference, data,  inference_flavors, burn_i
         ci_lower = mean_vals .- 1.96 .* se_vals
 
         #AUC vlaues
-        (auc500, auc) = compute_auc_values(mean_vals, plot_name)
+        # (auc500, auc) = compute_auc_values(mean_vals, plot_name)
 
         #Surpass steps for baseline 
         if (i == 1) # rand start
             #how long till u get something as good as smt initial 
             smt_init_score = flavored_scores[2][1][1]
             catchup_steps = steps_to_surpass(mean_vals, smt_init_score)
-            open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "a") do file
+            open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "w") do file
                 println(file, "surpass steps :$catchup_steps")
             end
         end
@@ -197,11 +197,11 @@ end
 function compute_auc_values(mean_scores, plot_name)
     #AUC values
     # full
-    auc = trapz(1:length(mean_scores), mean_scores)
+    # auc = trapz(1:length(mean_scores), mean_scores)
     
     # early-stage auc
-    window = 1:500
-    auc500 = trapz(window, mean_scores[window])
+    # window = 1:500
+    # auc500 = trapz(window, mean_scores[window])
 
       #Print inference stats:
       open(RESULTS_DIR[] * "stats_"*plot_name*".txt", "w") do file
@@ -223,7 +223,7 @@ function compare_jumps_to_no_jumps(inference, data)
     inference_flavors = [plain, with_jumps]
     # inference_flavors = [with_jumps]
     # benchmark_score_progression_with_jumps(inference, data, inference_flavors, 20, 50)
-    benchmark_score_progression_with_jumps(inference, data, inference_flavors, 0, 1)#TODO do properly
+    benchmark_score_progression_with_jumps(inference, data, inference_flavors, 0, 2)#TODO do properly
 end
 
 function benchmark_score_progression_with_jumps(inference, data,  inference_flavors, burn_in=10, rounds=50)
@@ -246,14 +246,18 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
         # Runs inference algorithm #rounds times and collects score progression
         scores::Vector{Vector{Float64}} = [] # tracks score progress for each inference 
         jumps = []
+        successes = []
         for i=1:rounds
             Random.seed!(i)
-            (scoring, is_jump) = inference(data, flavor)
+            tracker = inference(data, flavor)
+
+            scoring = tracker.scores
+            is_jump = tracker.jumps
 
             push!(scores, scoring)
             jumps = is_jump #(TODO if u want to change) this assumes that jumps happen at same frequency in all runs
 
-
+            push!(successes, tracker.jump_successes)
             # PLOT score progression with jumps for each inference run 
             plot_name = inference_flavor_name(flavor)
                 
@@ -269,6 +273,7 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
                 linewidth=2,
                 ylims = (min_y, max_y))
 
+            println(jumps)
             x_jump = findall(jumps)
             scatter!(x_jump, scoring[x_jump], 
                 markershape=:circle, 
@@ -280,6 +285,17 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
             ######
 
         end
+
+        plot_name = inference_flavor_name(flavor)
+        open(RESULTS_DIR[] * "jump_succ_"*plot_name*".txt", "w") do file
+            println(file, "jumps :$(successes)")
+            # println(file, "window-end-avg: $(mean_vals[drift_phase])")
+            # println(file, "avg last :$(mean_vals[length(mean_vals)])")
+
+            # accepted = flavored_accepted[i]
+            # println(file, "avg acceptance in window (%): $(mean(accepted))")
+        end
+
         push!(flavored_scores, scores)
         push!(flavored_jumps, jumps)
    

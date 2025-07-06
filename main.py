@@ -1,5 +1,6 @@
 import math
 import sys
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,7 +35,7 @@ OBS(B == 1)
 
 
 tracey = [] # Used as a hacky way to print out only choice_map decision vars for the final model
-
+start_time = None
 
 def select_vars_to_include_in_trace_prob_computation(choice_map, option="ALL", custom=[]):
     '''Selects the variables to include in the trace probability computation
@@ -98,7 +99,7 @@ def copmute_trace_prob_estim_from_likelihood_dv(trace, choice_map, compound_func
 
     return pdfi
 
-def solver_opti_loop(solver, trace_prob, iter_resources = 5, log = False, plot=True):
+def solver_opti_loop(solver, trace_prob, iter_resources = 10, log = False, plot=True):
     '''Manual optimization loop that maximizes the trace probability'''
     #TODO: LOG decision variables
     #TODO: is this using incremental solving in th emain loop or restars CP??
@@ -132,8 +133,15 @@ def solver_opti_loop(solver, trace_prob, iter_resources = 5, log = False, plot=T
                 save_model_solution(m, f"solver_results/intermediate_solution{iter}.txt", likelihoods = True)
 
     print(f"Final Model: {m}")
+    end_time = time.time()
+    print(f"SAT Exec time: {end_time - start_time:.4f}")
     if m is not None:
         save_model_solution(m)
+        if phase == 1:
+            # Save trace prob to be used in phase 0
+            with open(config.run_dir + "solver_results/trace_prob_to_improve.txt", "w") as f:
+                f.write(f"{m[trace_prob]}")
+            f.close
     if m is None:
         #TODO: for this to show an unsat core, all added constraints have to be tracked and named
         # with s.assert_and_track(constraint , 'consraint_name')
@@ -173,54 +181,122 @@ def save_model_solution(m, file = "solver_results/model_solution.txt", likelihoo
         f.close
 
 
-def use_manual_optimiz_loop():
+def use_manual_optimiz_loop(phase):
     solver = init_solver()
 
-    choice_map, trace = transport_data_from_PP_model(solver)
+    choice_map, trace, soft_preferences = transport_data_from_PP_model(solver, phase)
 
     global tracey
     tracey = trace
     # Compute trace probability estimation
     # select_vars_to_include_in_trace_prob_computation(choice_map)
     # trace_prob_estim = compute_trace_prob_estim(trace, choice_map)
-    # trace_prob_estim = likelihood_A + likelihood_B
 
-    # trace_prob_estim = likelihood_A*alive_A + likelihood_B*alive_B + likelihood_C*alive_C
     trace_prob_estim = copmute_trace_prob_estim_from_likelihood_dv(trace, choice_map)
     # Trace prob estimation will be the objective function to minimize
     trace_prob = z3.Real("trace_prob")
     solver.add(trace_prob == trace_prob_estim)
 
+    if phase == 0 and os.path.exists(config.run_dir + 'solver_results/trace_prob_to_improve.txt'):
+        with open(config.run_dir + 'solver_results/trace_prob_to_improve.txt', "r") as f:
+            line = f.read().strip()
+            val = float(eval(line))  # or use Fraction, if you want exact math
+        # print(val)
+        solver.add(trace_prob > val)
+
+    global start_time
+    start_time = time.time()
     save_SMT_LIB_standard_model(solver)
 
-    # Optimization loop
+    # Maximize number of soft_constraints (preferences) via binary search
+    max_soft_constr = len(soft_preferences)
+    if max_soft_constr > 0:
+        # Add counter for the number of soft constraints satisfied by the solution
+        sum = 0
+        for i in soft_preferences:
+            sum += i
+        satisfied_preferences = z3.Int("satisfied_preferences")
+        solver.add(satisfied_preferences == sum)
 
+        if phase == 0: #ignore soft if just computing current trace prob
+            maximize_soft_constr_naive_binary_search(max_soft_constr, satisfied_preferences, solver)
+
+            # solver.add(satisfied_preferences >= max_soft_constr)
+
+        # HARD CONSTRAINTS INSTEAD #c4
+        # for i in soft_preferences:
+        #     solver.add(i == 1)
+
+    # Trace prob Optimization loop
     solver_opti_loop(solver, trace_prob, log=True)
 
 
-# DATA
-# xs = [1, 2, 3, 4, 5]
-# # ys = [1, 2, 3, 4, 5]
-# # ys = [3.2, 4.001, 5.002, 5.89, 7.01]
-#
-# xs = [-5., -4., -3., -2., -1., 0., 1., 2., 3., 4., 5.]
-# ys = [6.75003, 6.1568, 4.26414, 1.84894, 3.09686, 1.94026, 1.36411, -0.83959, -0.976, -1.93363, -2.91303]
-#
+def maximize_soft_constr_naive_binary_search(max_soft_constr, satisfied_preferences, solver):
+    print(f"Maximizing soft constraints ...out of {max_soft_constr}")
+    # First check if all soft constraints are satisfiable
+    solver.push()
+    solver.add(satisfied_preferences >= max_soft_constr)  # TODO: why is it that if i put "==" here it takes forever??
+    if solver.check() == z3.sat:
+        last = max_soft_constr
+        print(":p")
+    else:
+        print("Not all soft constraints are satisfiable, using binary search to find max satisfiable soft constraints")
+        solver.pop()
+        last = 0
+        left = 0
+        right = max_soft_constr
+        solver.set("timeout",
+                   150000)  # set timeout for checks at 5' #  TODO account for solver taking longer the smaller mid is
+        while (
+                left <= right):  # TODO cap at depth depending on #soft_constr? knowing precicely how many soft constr is not as important as maintianing most of them
+            mid = (left + right) // 2
+            solver.push()
+            solver.add(satisfied_preferences >= mid)
+            if solver.check() == z3.sat:
+                # mid is a possible solution
+                print(f"soft >= {mid}")
+                left = mid + 1
+                last = mid
+                save_model_solution(solver.model(), f"solver_results/pref_solution{mid}.txt", likelihoods=True)
+            else:
+                # TODO check if addign following constraint makes it faster
+                # solver.add(satisfied_preferences < mid ) # have to make sure its poped properly
+                print(f"soft < {mid}")
+                # mid is not a possible solution
+                right = mid - 1
+            solver.pop()
+    solver.set("timeout", 4294967295)  # unset timeout
+    print(f"Max soft constraints: {last}")
+    solver.add(satisfied_preferences >= last)
+
 
 #Setup file paths
 # Probabilisitc problem directory
 # working_dir = ""#TODO get from run args[]
 # run_dir = #TODO get from run args[] or determine through name conflict; create on the spot
 
+config.run_option = ""
 if len(sys.argv) > 1:
     config.working_dir = sys.argv[1]
     config.run_dir = sys.argv[2]
+    if len(sys.argv) > 3:
+        config.run_option = sys.argv[3]
+
 else:
     config.working_dir = "/home/mars/Documents/Documents/Study/Master/thesis/pipe/testing/"
     config.run_dir = "/home/mars/Documents/Documents/Study/Master/thesis/pipe/testing/"
 
-use_manual_optimiz_loop()
-
+phase = 0
+import os
+if os.path.isfile(config.run_dir + "parsing_results/current_trace.txt"):
+    phase = 1
+print(f"PHASE: {phase}")
+use_manual_optimiz_loop(phase)
+if phase == 1:
+    # phase 1 would save the current trace prob and subsequent solver will try to improve it
+    phase = 0
+    print(f"PHASE: {phase}")
+    use_manual_optimiz_loop(phase)
 
 
 

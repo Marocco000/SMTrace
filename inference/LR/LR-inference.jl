@@ -50,7 +50,7 @@ end
 function get_data_and_observations()
 
     #Generate synthetic data
-    (xs, ys) = make_synthetic_dataset(100) #TODO change to 100
+    (xs, ys) = make_synthetic_dataset(20) #TODO change to 100
     
     #Pack data (parameter for the inference procedure)
     data = [xs]
@@ -86,7 +86,7 @@ function inference_over_simple_LR(xs, infer_flavor::Inference_flavor)
     else 
         #Random start
         (init_trace, _) = generate(ppmodel, (),  observations)
-        update!(tracker, get_score(init_trace), false, true)
+        update!(tracker, get_score(init_trace), false, false)
     end
 
     println("Initial score: $(get_score(init_trace))")
@@ -97,35 +97,90 @@ function inference_over_simple_LR(xs, infer_flavor::Inference_flavor)
     # Run MH for a couple of steps for asympt guarantees ("couple of steps != asymptotic") TODO
     mh_steps_cap = 2000
 
+    # Jumps 
+    rejects = 0
+    jump_count = 2
+    conseq_rejects = 0
+
     # Sample iterations
     while tracker.mh_steps <= mh_steps_cap
         # TODO add jumps
         line_params = select( :slope, :intercept) #reintroduce noise here TODO
 
+        # conseq_rejects = rejects == 1 ? conseq_rejects + 1 : 0 
+        jump_condition = rejects >= 1
+        print("JUMP COND: $jump_condition")
+       
+        if infer_flavor.warm_jump && jump_condition && jump_count > 0
+            # perform warm_jump if possible
+
+            # Block jump
+            fixed_selection = select(:slope)
+            if jump_count == 1
+                fixed_selection = select(:intercept)
+            end
+            # optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+            
+            #Score improve jump  
+            optional_tr = score_improve_smt(tr, observations, ppfile)
+
+            if optional_tr === nothing
+                println("UNSAT")
+                jumpsucc!(tracker, "unsat")
+
+            else 
+                score_before = get_score(tr)
+                score_smt = get_score(optional_tr)
+                # small_prob = 1/10
+                # accept_SMT_jump_prob = score_smt > score_before ? 1 : small_prob
+                # accept_SMT_jump = rand() < accept_SMT_jump_prob
+                accept_SMT_jump = score_smt > score_before
+                if accept_SMT_jump
+                    tr = optional_tr
+                    println("Pre-Jump score: $(get_score(tr))")
+
+                    println("PostJump score: $(get_score(tr))")
+                
+                    jumpsucc!(tracker, "accepted")
+                    update!(tracker, get_score(tr), false, true)        
+                    gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
+                    
+                else
+                    jumpsucc!(tracker, "unsat")
+                end
+
+            end
+            jump_count -= 1
+
+        end
+        rejects = 0
         if  current_gaussian_resources  > 0 && (infer_flavor.warm_start || infer_flavor.warm_jump)
-            (tr, a) = mh(tr, line_drift_proposal, ())
+            (tr, a) = mh(tr, line_drift_proposal, (); observations=observations)
             update!(tracker, get_score(tr), true, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
 
             current_gaussian_resources -= 1
         else
-            (tr, a) = mh(tr, select(:intercept, :slope))
+            (tr, a) = mh(tr, select(:intercept, :slope); observations= observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
         end
 
     end
 
     # Plot intial trace, last and best
     # p = Plots.plot([visualize_trace(init_trace, title="SMT (init) trace")
-    # # , 
-    # #             visualize_trace(tr, title="last trace"), 
-    # #             visualize_trace(besttr, title="best trace")
-    #             ]...)
+    # , 
+    #             visualize_trace(tr, title="last trace"), 
+    #             visualize_trace(besttr, title="best trace")
+                # ]...)
     # savefig(p, RESULTS_DIR[] *  "LR-SMT-init.png")
     # p
 
     trim!(tracker, mh_steps_cap)
+    print(tracker.jump_successes)
     return tracker
 end
 

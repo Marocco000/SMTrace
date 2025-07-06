@@ -48,7 +48,7 @@ end
 
 function get_data_and_observations()
 
-    n = 100
+    n = 20
     data = make_synthetic_data(n)
     observations = make_constraints(data)
     
@@ -80,10 +80,46 @@ function inference(data, infer_flavor::Inference_flavor)
 
     println("INIT SCORE: $(get_score(tr))")
     
+    # Jumps    
+    rejects = 0
+    jump_count = 1
+
     mh_steps_cap = 2000
 
     # Sample iterations
     while tracker.mh_steps <= mh_steps_cap
+        jump_condition = rejects > 55
+        println("Jump condition: #rejects: $rejects")
+        if infer_flavor.warm_jump && jump_condition && jump_count > 0
+            # perform warm_jump if possible
+            # fixed_selection_options = [select(:mean1, :mean2, :mean3), select(:mean3, :mean2), select(:mean1, :mean3)]
+            # fixed_selection = fixed_selection_options[Int(j/2)]
+
+            fixed_selection = select(:mean1, :mean2)#
+            fixed_selection = select(:z1)
+            fixed_selection = select(:mean1)
+            # optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+            optional_tr = reuse_warm_start()
+            if optional_tr === nothing
+                println("UNSAT")
+            else 
+                #TODO only update if better? 
+                println("Pre-Jump score: $(get_score(tr))")
+
+                score_before = get_score(tr)
+                score_smt = get_score(optional_tr)
+                small_prob = 1/10
+                accept_SMT_jump_prob = score_smt > score_before ? 1 : small_prob
+                accept_SMT_jump = rand() < accept_SMT_jump_prob
+                tr = optional_tr
+                println("PostJump score: $(get_score(tr))")
+
+
+                update!(tracker, get_score(tr), false, true)        
+                gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
+                jump_count -= 1
+            end
+        end
         #TODO jumps & drifts
         # if infer_flavor.warm_jump 
         #     # perform warm_jump if possible
@@ -125,11 +161,14 @@ function inference(data, infer_flavor::Inference_flavor)
             #update normal params
             (tr, a) = mh(tr, select(:mu))
             update!(tracker, get_score(tr), false, false)
-            accepted!(tracker, a) 
+            accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
+ 
             
             (tr, a) = mh(tr, select(:sigma))
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
         end
     end
 

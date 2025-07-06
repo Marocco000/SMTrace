@@ -1,9 +1,15 @@
 mutable struct Tracker
     scores::Vector{Float64}
-    jumps::Vector{Int64} #Bool
     drifts::Vector{Int64}
+    jumps::Vector{Bool} #Bool
     mh_steps::Int
     accepted::Vector{Bool} # array of MH acceptance true/false to compute accepted ratio for a drift window
+    jump_successes::Dict{String, Int}
+end
+
+function jumpsucc!(t::Tracker, str)
+    #str = unsat, reject, accept
+    t.jump_successes[str] = get(t.jump_successes, str, 0) + 1
 end
 
 function update!(t::Tracker, score, is_drift, is_jump)
@@ -28,5 +34,5 @@ end
 
 function new_tracker()
     # return Tracker(Float64[], [], [], 0, [])
-    return Tracker(Float64[], Int64[], Int64[], 0, Bool[])
+    return Tracker(Float64[], Int64[], Bool[], 0, Bool[], Dict{String, Int}())
 end

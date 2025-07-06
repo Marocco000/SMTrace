@@ -197,6 +197,20 @@ end
 
 # end
 
+function score_improve_smt(tr, observations, ppfile)
+    set_current_run() #creats a new RUN_XX results folder
+    
+    #current trace for which score will be improved by smt
+    save_curr_trace(tr)
+
+    #empty block restricitons
+    open(RUN_DIR[] * "parsing_results/block.txt", "w") do file
+    end
+
+    jump_tr = ransac_smt(observations, ppfile) # run smt with the obs + selection constriants
+    jump_tr
+end
+
 function block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
     return block_smt(fixed_selection, tr, observations, ppfile, true)
 end
@@ -207,6 +221,8 @@ function block_smt(selection, tr, observations, ppfile, reverse = false)
     
     set_current_run() #creats a new RUN_XX results folder
     
+    # save_curr_trace(tr)
+
     # Get SMT trace that optimizes only on the addresses in selection 
     block_constraints_smt(selection, tr, observations, reverse) # save values form trace for the addresses not in selection to be used as constraints.
     println(selection)
@@ -235,6 +251,24 @@ function block_constraints_smt(selection, tr, observations, reverse)
         end
     end
 end
+
+# """Saves value assignment of the current trace"""
+function save_curr_trace(tr)
+
+    open(RUN_DIR[] * "parsing_results/current_trace.txt", "w") do file
+
+        # Iterate over the selected choices and fix all other ones that are not already observations
+        for choice in get_values_shallow(get_choices(tr))
+            key = choice[1]    
+            if !Gen.has_value(observations, key)     
+                value = choice[2]
+                value = Float64(value) # in case its a bool result from Bernoulli  
+                println(file, "$key = $value")
+            end
+        end
+    end
+end
+
 
 # function smt_inference()
 

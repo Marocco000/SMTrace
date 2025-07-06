@@ -30,6 +30,12 @@ class RC_Normal(RC_Distribution):
             assert var > 0
 
 
+    def lb(self):
+        return self.mean - 3 * self.var
+    def ub(self):
+        return self.mean + 3 * self.var
+
+
 
     def true_likelihood(self, x):
         return norm.pdf(x, self.mean, self.var)

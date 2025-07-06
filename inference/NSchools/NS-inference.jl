@@ -117,8 +117,8 @@ function inference(data, infer_flavor::Inference_flavor)
 
     # Initial guess
     if infer_flavor.warm_start
-        # init_trace = ransac_smt(observations, ppfile, false)
-        init_trace = reuse_warm_start()
+        init_trace = ransac_smt(observations, ppfile, false)
+        # init_trace = reuse_warm_start()
         
         gaussian_drift_resources = infer_flavor.gaussian_drift_res # set resources after smt start
         update!(tracker, get_score(init_trace), false, true)

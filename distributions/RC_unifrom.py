@@ -12,8 +12,8 @@ class RC_Uniform(RC_Distribution):
         super().__init__(RC)
         self.a = a
         self.b = b
-
         self.div = z3.Real(f"{RC.name}_div")
+        solver.add(self.div == 1/(self.b - self.a))
         # solver.add(self.div == z3.If(self.b - self.a == 0, -21, 1/(self.b - self.a)))
         # solver.add(1/(get_ub(self.b)-get_lb(self.a)) <= self.div , self.div <= 1/(get_lb(self.b)-get_ub(self.a)))
         #TODO check if bounding works but needs choice_map and prob also variable_map
@@ -52,6 +52,9 @@ class RC_Uniform(RC_Distribution):
         guard = z3.If(self.b - self.a == 0, -21, 1/(self.b - self.a)) # Guards against division by zero
         return z3.If(x<self.a, 0,
                   z3.If(x<=self.b, self.div,0))
+        # div = 1/(self.b - self.a)
+        # return z3.If(x<self.a, 0,
+        #           z3.If(x<=self.b, div,0))
 
     def solver_bounds(self, solver):
         solver.add(self.RC.value >= self.a)

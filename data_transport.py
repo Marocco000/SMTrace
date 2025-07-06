@@ -10,6 +10,7 @@ from distributions.RC_beta import RC_Beta
 from distributions.RC_categorical import RC_Categorical
 from distributions.RC_exponential import RC_Exponential
 from distributions.RC_gamma import RC_Gamma
+from distributions.RC_geometric import RC_Geometric
 from distributions.RC_normal import RC_Normal
 from distributions.RC_poisson import RC_Poisson
 from distributions.RC_uniform_discrete import RC_Uniform_Discrete
@@ -21,38 +22,71 @@ import config
 
 #TODO: var_choices is passed around like ping-pong ball, set as global variable
 
+solving_partial_trace = False #False if solving full trace (no fixed values defined in block)
+soft_preferences = []
+improving_curr_trace = False
+# implications =
+def transport_data_from_PP_model(solver, phase):
 
-def transport_data_from_PP_model(solver):
-
-
-    return take_model_from_files(solver)
+    return take_model_from_files(solver, phase)
     # return noise_model(solver)
 
-def take_model_from_files(solver):
+def take_model_from_files(solver, phase):
+
+    global solving_partial_trace
+    solving_partial_trace = False
+    global soft_preferences
+    soft_preferences = []
+    global improving_curr_trace
+    improving_curr_trace = False
+
+    # phase = 0
+    # phase = 1 # read curr trace and return trace prob estimate
+
     var_choices = transport_alive_constraints(solver)  # alive constraints for the RCs
 
     choice_map, trace = read_model_from_dump(solver, var_choices)
 
-
     # Incorporate observations
     add_observations_to_model(solver, choice_map, config.working_dir + 'parsing_results/obs.txt')  # add normal vars as well for refereneces
 
-    # Add fixed subset of decision variables (e.g. for block resimulation)(#TODO choose if u want to keep in trace prob compute)
+    # Add fixed subset of decision variables (e.g. for block resimulation)
+    # if config.block:
     add_observations_to_model(solver, choice_map, config.run_dir + 'parsing_results/block.txt', False)  # add normal vars as well for refereneces
+
+    # Add restrictions to the model (latent != value)
+    # if config.restrictions:
+    import os
+    if os.path.exists(config.run_dir + 'parsing_results/restrictions.txt'): #check if there is a erstriction file (because its optional, used usually for warm jumps)
+        print("Adding restrictions from file")
+        add_restrictions_to_model(solver, choice_map, config.run_dir + 'parsing_results/restrictions.txt')  # add normal vars as well for refereneces
+
+    # if config.run_dir + 'parsing_results/current_trace.txt' != '':#TODO auto phases
+    if phase == 1:
+        add_fixed_current_trace(solver, choice_map, config.run_dir + 'parsing_results/current_trace.txt')
 
     # Check and add constraints for random samples that need to be fixed prior ot solving
     for elem in choice_map:
         if choice_map[elem].fixed_sample is not None and choice_map[elem].RC.is_observation == False:
             print(f"Fixed sample for {elem}: {choice_map[elem].fixed_sample}")
             solver.add(choice_map[elem].RC.value == choice_map[elem].fixed_sample)
+            # solver.add(choice_map[elem].RC.value == 10)#C3
 
 
     # Add bounds to the latent RC variables (eg. uniform[3,5] -> 3 <= x <= 5)
+    # if phase != 1: #TODO add back for jumps?
     add_bounds_to_latent_RC_vars(solver, choice_map)
+
+
     # Add likelihood computaiton decision variabels
     add_likelihood_dv(choice_map, solver)
 
     add_branch_alternatives_logic(choice_map, solver)
+
+    #Remove latent from trace compute (remove priors) #TODO C3(remove for other models than gaussian )
+    # for key in choice_map.keys():
+    #     if '_' not in key and (choice_map[key].RC.is_observation == False):
+    #         choice_map[key].selected = False
 
     print("\nMODEL BEFORE OPTI\n")
     f = open(config.run_dir + "solver_results/pymodel.txt", "w")
@@ -61,15 +95,57 @@ def take_model_from_files(solver):
     print("\n------------\n")
 
     save_SMT_LIB_standard_model(solver)
-    return choice_map, trace
+    return choice_map, trace, soft_preferences
 
 
 def add_bounds_to_latent_RC_vars(solver, choice_map):
     # Add sensible bounds to the model decision(latent) variable
+
     for key in choice_map.keys():
-        if choice_map[key].RC.is_observation == False:
-            # print(f"Added bounds for variable: {key}")
+        #Treat observed alternatives as soft constraints
+        if isinstance(choice_map[key], RC_Unknown) and choice_map[key].RC.is_observation == True:
+            # Create only one soft constraint to satisfy one of the branches
+            global soft_preferences
+            counter = len(soft_preferences) + 1
+            preference = z3.Int(f'preference{counter}')
+            solver.add(z3.Or(preference == 0, preference == 1))
+            soft_constraint = True
+            for alt in choice_map.keys():
+                if alt.startswith(f"{key}_"):
+                    # choice_map[alt].solver_bounds(solver)
+
+                    bounds_for_observed_alt = z3.And(choice_map[alt].RC.value >= choice_map[alt].lb(), choice_map[alt].RC.value <= choice_map[alt].ub())
+                    soft_constraint = z3.And(bounds_for_observed_alt, soft_constraint)
+            solver.add(z3.Implies(preference == 1, soft_constraint))
+            soft_preferences.append(preference)
+            # solver.add(preference == 1)
+
+    for key in choice_map.keys():
+        #TODO: add bounds for observations if they're non-restrictive and add them as soft constr otherwise
+        # if '_' in key:
+        #     if choice_map[key.split('_')[0]].RC.is_observation == True:
+        #         choice_map[key].solver_bounds(solver)
+
+        #     # if solving_partial_trace == False: #only add restricting bounds if not solving full trace, for partial trace it gives conflicts
+            #         # choice_map[key].solver_bounds(solver)
+            #     # Add it as soft constraint:
+            #     global soft_preferences
+            #     counter = len(soft_preferences) + 1
+            #     preference = z3.Int(f'preference{counter}')
+            #     solver.add(z3.Or(preference==0, preference==1))
+            #     solver.add(z3.Implies(preference==1, choice_map[key].RC.value >= choice_map[key].lb()))
+            #     solver.add(z3.Implies(preference==1, choice_map[key].RC.value <= choice_map[key].ub()))
+            #     soft_preferences.append(preference)
+        if '_' not in key and  (choice_map[key].RC.is_observation == False):
+                # and ('_' not in key or choice_map[key.split('_')[0]].RC.is_observation == False)):
+            # Do not add bounds (as they are restrictive) to observed variables
+            # or alternatives of that observed var
+            # if not isinstance(choice_map[key], RC_Normal):
+            print(f"adding restrictive bounds for:{key}")
             choice_map[key].solver_bounds(solver)
+        # if '_'not in key and (choice_map[key].RC.is_observation == True):
+        #     # no alternative but is observation, add a soft bounding constraint
+        #     choice_map[key].solver_bounds(solver) #TODO (added for gaussian model, maybe breaks for others)
 
 def add_observations_to_model(solver, choice_map, filename, keep_in_trace_compute = True):
     '''Takes a file with adr = value lines and adds the values to the SMT model as constraints.'''
@@ -78,11 +154,48 @@ def add_observations_to_model(solver, choice_map, filename, keep_in_trace_comput
         data = file.read().split("\n")
     for line in data:
         if line != "":
+            if not keep_in_trace_compute:#TODO: slow check; if block.txt is not empty
+                global solving_partial_trace
+                solving_partial_trace = True
             var_name = line.split(" = ")[0]
             value = line.split(" = ")[1]
             solver.add(choice_map[var_name].RC.value == float(value))
             choice_map[var_name].RC.is_observation = True
             choice_map[var_name].selected = keep_in_trace_compute # Remove likelihood from trace prob compute
+
+def add_restrictions_to_model(solver, choice_map, filename):
+    '''Takes a file with adr != value lines and adds the values to the SMT model as constraints.'''
+    with open(filename, 'r') as file:
+        data = file.read().split("\n")
+    for line in data:
+        if line != "":
+            var_name = line.split(" = ")[0]
+            value = line.split(" = ")[1]
+            if '/' in value:
+                numerator, denominator = value.split('/')
+                val = float(numerator) / float(denominator)
+            else:
+                val = float(value)
+            solver.add(choice_map[var_name].RC.value != val) #doesnet check mathematical equivalence
+
+            # (abs(latent-value) >= epsilon)
+            # epsilon = 0.1
+            # latent = choice_map[var_name].RC.value
+            # solver.add(z3.If(latent-val >= 0, latent-val >= epsilon, val-latent >= epsilon))
+
+def add_fixed_current_trace(solver, choice_map, filename):
+    '''Takes a file with adr = value lines and adds the values to the SMT model as constraints.'''
+    with open(filename, 'r') as file:
+        data = file.read().split("\n")
+    for line in data:
+        if line != "":
+            global improving_curr_trace
+            improving_curr_trace = True
+
+            var_name = line.split(" = ")[0]
+            value = line.split(" = ")[1]
+            # choice_map[var_name].RC.introduce_curr_value(solver)
+            solver.add(choice_map[var_name].RC.value == float(value))
 
 
 def transport_alive_constraints(solver):
@@ -182,6 +295,8 @@ def create_RC_object(choice_map, distribution_name, distribution_args, var_name,
         #Assumes line is given as x ~ categorical([0.2,0.3, ...])
         probabilities = [eval(part.strip('[] ')) for part in distribution_args]
         choice_map[var_name] = RC_Categorical(RC(var_name, discrete = True), probabilities)
+    elif distribution_name == "geometric":
+        choice_map[var_name] = RC_Geometric(RC(var_name, discrete=True), param_in_cp(distribution_args[0], choice_map, variables))
 
     else:
         raise Exception(f"{distribution_name} distribution not supported")
@@ -210,34 +325,6 @@ def read_model_from_dump(solver, var_choices):
             # Create RC object and add to choice_map
             create_RC_object(choice_map, distribution_name, distribution_args, var_name, var_choices, solver, fixed_random_choices)
 
-
-    #Set correct likelihooddv: for all RC distributions that are known
-    for var in choice_map.keys():
-        if not isinstance(choice_map[var], RC_Unknown):
-            solver.add(choice_map[var].likelihooddv == choice_map[var].estim_likelihood(choice_map[var].RC.value))
-    # For unknown RCs, likelihood depends on the stochastic alternatives
-
-
-    # Naive scheme for dealing with branch alternatives: collecting and aggregating alternatives for a RC with stchastic existance
-    for var in choice_map.keys():
-        if isinstance(choice_map[var], RC_Unknown):
-            # there are multiple alternatives for the current variable
-            alive_unknown = False # main is alive if any of the alternatives are alive
-            for alt in choice_map.keys():
-                if alt.startswith(f"{var}_" ):
-                    # if alternative is alive, main takes likelihood and value of alternative
-                    solver.add(z3.If(choice_map[alt].alive == True,
-                                     z3.And(choice_map[var].likelihooddv == choice_map[alt].likelihooddv,
-                                            choice_map[var].RC.value == choice_map[alt].RC.value), True))
-
-                    # compute maine alive recursively:  if any of the alternatives are alive
-                    alive_unknown = z3.Or(alive_unknown, choice_map[alt].alive)
-
-            # main is alive if any of the alternatives are alive
-            solver.add(choice_map[var].alive == alive_unknown)
-
-    # print(solver)
-    # print("----")
 
     #TODO not in the order anymore since the order is not maintained in the dictionary, is this necessary??
     #Collect unique names, without their alternatives
@@ -283,10 +370,6 @@ def save_SMT_LIB_standard_model(solver, file = "smtmodels/simplepp_model_SMTLIB.
     """Saves a model in SMT-LIB standard format."""
     with open(file, "w") as f:
         f.write(solver.to_smt2())
-
-# solver = init_solver()
-#
-# choice_map, trace = transport_data_from_PP_model(solver)
 
 
 # DEPRECATED

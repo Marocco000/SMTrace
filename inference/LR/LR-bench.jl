@@ -5,7 +5,7 @@ set_working_dir(@__DIR__)
 #create results structure: results/parsing_results and res/figures
 #TODO for each RUN 
 
-include("OLR-inference.jl")
+include("LR-inference.jl")
 
 include(joinpath("..", "..", "julie", "benchmarking.jl"))#
 # include(joinpath("..", "..", "julie", "inference-smt.jl"))
@@ -29,12 +29,12 @@ xs = data[1] # TODO unpack this properly
 # inference(data, warm_start)
 
 
+
 #Compare warm-start to warm-jump 
 # compare_warm_start_to_random_start(inference, data)
 
-#Gaussian drift window post warm start
+#Compare warm start with and without gaussian drifts 
 # compare_warm_start_with_drifts(inference, data)
-
 
 #Visualise warm-jumps
 compare_jumps_to_no_jumps(inference, data)

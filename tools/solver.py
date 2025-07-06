@@ -5,6 +5,7 @@ def init_solver():
     solver = z3.Solver()
     # solver = z3.Then('purify-arith', 'nlsat').solver()
 
+    z3.set_param('smt.random_seed', 1)
     # solver.set_option(precision=30) #TODO is5 this ieasier than precision fro printing?
 
     z3.set_option(max_args=10000000, max_lines=1000000, max_depth=10000000,

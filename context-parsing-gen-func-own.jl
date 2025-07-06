@@ -261,6 +261,8 @@ function type_from_distribution(distr_expr)
         return :Real
     elseif distribution_name == "categorical"
         return :Int
+    elseif distribution_name == "geometric"
+        return :Int
     #TODO exhaustive
     else
         error("Unrecognized distribution: $distribution_name")

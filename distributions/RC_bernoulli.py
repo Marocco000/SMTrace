@@ -27,5 +27,10 @@ class RC_Bernoulli(RC_Distribution):
     def solver_bounds(self, solver): #TODO use True/False values instead?
         solver.add(z3.Or(self.RC.value == 0, self.RC.value ==1))
 
+    def add_consisteny_constraints(self, solver):
+        #TODO call this at constructor and verify
+        solver.add(z3.If(self.p == 1, self.RC.value == 1, True))
+        solver.add(z3.If(self.p == 0, self.RC.value == 0, True))
+
     def sample(self):
         return random.randint(0, 1)

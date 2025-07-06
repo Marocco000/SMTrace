@@ -46,19 +46,50 @@ def estim_likelihood_piecewise_mixture(x, mean, var, name, solver, segments=3):
             exp_component =  math.exp(-k * k * i * i / 8)
             vals.append(one_over_var_component * exp_component)
         else:
+            exp_pow = -k * k * i * i / 8
+            #
+            # dist = i * var
+            # modul = z3.Real(f'{name}_exp_modul{i}_1')
+            # solver.add(modul == (4-i))# z3.If(mean - dist >= 0, mean - dist, dist - mean))
+            # exp_pow = modul
+
+            # expo = z3.Real(f'{name}_exponent_term{i}_1')
+            # solver.add(expo == 4*var - z3.If(exp_pow == 0, 1 , estim_exp_component(exp_pow)))
+
             valy = z3.Real(f'{name}_endpoint{i}_1')
             # solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
-            solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8), f'piecewise for {name}_endpoint{i}_1')
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8), f'piecewise for {name}_endpoint{i}_1')
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * expo, f'piecewise for {name}_endpoint{i}_1')
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * modul, f'piecewise for {name}_endpoint{i}_1')
+            solver.assert_and_track(valy ==  (12-var) * (4-i), f'piecewise for {name}_endpoint{i}_1')
             vals.append(valy)
 
     for i in range(S + 1):  # Points from [mean, mean + 3*var]
         endpoints.append(mean + k * i)  # xi in gaussian pdf
         if fixed:
             vals.append((1/(var * 2.5066)) * math.exp(-k*k*i*i/8)) #yi in gaussian pdf f(xi) = 1/var2Pi * exp (kkii/8)
+            # print("FIXED PIECEWISE COMPUTATION")
         else:
+
+            # exp_pow = -k * k * i * i / 8
+            # dist = i * var
+            # modul = z3.Real(f'{name}_exp_modul{i}_2')
+            # solver.add(modul == 4 - i )#z3.If(mean - dist >= 0, mean - dist, dist - mean))
+            # exp_pow = modul
+
+            # expo = z3.Real(f'{name}_exponent_term{i}_2')
+            # solver.add(expo == z3.If(exp_pow == 0, 1, estim_exp_component(exp_pow)))
             valy = z3.Real(f'{name}_endpoint{i}_2')
-            solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8),
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8),
+            #                         f'piecewise for {name}_endpoint{i}_2')#own
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * expo,
+            #                         f'piecewise for {name}_endpoint{i}_2')#own
+            # solver.assert_and_track(valy == (1 / (var * 2.5066)) * modul,
+            #                         f'piecewise for {name}_endpoint{i}_2')
+            solver.assert_and_track(valy == (12 - var) * (4-i),
                                     f'piecewise for {name}_endpoint{i}_2')
+
+
             # solver.add(valy == (1 / (var * 2.5066)) * estim_exp_component(-k * k * i * i / 8))  # * math.exp(-k * k * i * i / 8))
             vals.append(valy)
 
@@ -94,4 +125,4 @@ def estim_exp_component(x):
     # if isinstance(x, z3.ExprRef):
     return exp_maclaurin(x)
     # else:
-    #     return math.exp(x)
+    # return math.exp(x)

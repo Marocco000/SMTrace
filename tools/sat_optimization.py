@@ -87,7 +87,7 @@ def update_lower_bound(var, lower_bound, solver): #TODO: needs verification-test
     #TODO slplit interval between lb and up and try to find new possible lb there instead of just static
     if lower_bound > 1:
         # lower_bound ** 2,lower_bound * 2, #TODO add back? too aggressive and loose time
-        possible_lb_updates = [ lower_bound *2, lower_bound + 1, math.ceil(lower_bound),
+        possible_lb_updates = [ lower_bound *2, lower_bound + 1, math.ceil(lower_bound+0.000001),
                                lower_bound + 0.1, lower_bound + 0.01, lower_bound + 0.001]
         for lb in possible_lb_updates:
             if under_up(lb) and check_new_lower_constraint_sat(var, lb, solver):
@@ -107,7 +107,7 @@ def update_lower_bound(var, lower_bound, solver): #TODO: needs verification-test
 
     else: # (-oo, -1] range
         #TODO is math.ceil a infinite loop trap here?
-        possible_lb_updates = [lower_bound/2, lower_bound + 1, math.ceil(lower_bound)]
+        possible_lb_updates = [lower_bound/2, lower_bound + 1, math.ceil(lower_bound+0.000001)]
         for lb in possible_lb_updates:
             if under_up(lb) and check_new_lower_constraint_sat(var, lb, solver):
                 return lb

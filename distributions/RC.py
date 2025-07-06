@@ -4,6 +4,7 @@ import z3
 class RC(object):
     def __init__(self, name, observation = None, discrete = False):
         self.name = name
+        self.discrete = discrete
         if observation is None:  # its a decision variable
             if discrete:
                 self.value = z3.Int(name)
@@ -14,6 +15,14 @@ class RC(object):
         else:
             self.value = observation #TODO remove this line after obs incoporation
             self.is_observation = True
+        self.curr_value = None # Current trace value
+
+    def introduce_curr_value(self, solver):
+        """If the current trace is provided, each sample statement introduces a new decision variables for the current value"""
+        if self.discrete:
+            self.cur_value = z3.Int(f'curr_{self.name}')
+        else:
+            self.cur_value = z3.Real(f'curr_{self.name}')
 
 class RC_Distribution(ABC):
     def __init__(self, RC):

@@ -21,8 +21,8 @@ include(joinpath("..", "..", "julie", "benchmarking.jl"))
 # println("SCORE PROGRESSION: $(tracker.scores)")
 # plot_individual_score_progression(tracker.scores, "one-inference", 1, :red)
 
-# warmstart = Inference_flavor(warm_start=true)
-# (s, d, j) = inference(data, warmstart)
+warmstart = Inference_flavor(warm_start=true)
+tracker = inference(data, warmstart)
 # print("SCORE PROGRESSION: $s")
 
 # INIT SC5RE: 
@@ -33,7 +33,7 @@ include(joinpath("..", "..", "julie", "benchmarking.jl"))
 
 
 #Compare warm start with and without gaussian drifts 
-compare_warm_start_with_drifts(inference, data)
+# compare_warm_start_with_drifts(inference, data)
 
 #Visualise warm-jumps
 # compare_jumps_to_no_jumps(inference, data)

@@ -71,8 +71,9 @@ end;
 """Creates data and observations"""
 function get_data_and_observations()
 
+    println(20)
     #Generate synthetic data
-    (xs, ys) = make_synthetic_dataset(100);
+    (xs, ys) = make_synthetic_dataset(20);
     
     #Pack data (parameter for the inference procedure)
     data = [xs]
@@ -118,8 +119,8 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
     if infer_flavor.warm_start
         # Warm start using the SMT trace
         # init_trace = smt_and_gaussian_drift()
-        # init_trace = ransac_smt(observations, ppfile, false)
-        init_trace = reuse_warm_start()
+        init_trace = ransac_smt(observations, ppfile, false)
+        # init_trace = reuse_warm_start()
 
         update!(tracker, get_score(init_trace), false, true)
         gaussian_drift_resources = infer_flavor.gaussian_drift_res
@@ -138,10 +139,12 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
     # block resimulation
     mh_steps_cap = 2000
 
+    rejects = 0 
     # Sample iterations
     while tracker.mh_steps <= mh_steps_cap
-      
-        if infer_flavor.warm_jump #TODO add frequency j%infer_flavor.warm_jump_frequency == 0
+        println("rejects : $rejects")
+        jump_condition = rejects > 5
+        if infer_flavor.warm_jump && jump_condition#TODO add frequency j%infer_flavor.warm_jump_frequency == 0
             #Perform warm jump (fully with diversity or for random block)
             # if j == 2
             #     params = select(:outlier1)
@@ -149,18 +152,34 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
             params = select( :slope, :intercept) #reintroduce noise here TODO
             # end
 
-            tr_try = block_smt(params, tr, observations, ppfile) #TODO: pass ppfile
+            # tr_try = block_smt(params, tr, observations, ppfile) #TODO: pass ppfile
+            tr_try = score_improve_smt(tr, observations, ppfile)
+
             if tr_try === nothing
                 # try again or bail?
-                iter+=1
+                # iter+=1
+                jumpsucc!(tracker, "unsat")
             else 
-                tr = tr_try
-                #reset gaussian drift resources
-                gaussian_drift_resources = infer_flavor.gaussian_drift_res
 
-                update!(tracker, get_score(tr), false, true)
+                score_before = get_score(tr)
+                score_smt = get_score(tr_try)
+                accept_SMT_jump = score_smt > score_before
+                if accept_SMT_jump
+                    tr = tr_try
+                    #reset gaussian drift resources
+                    gaussian_drift_resources = infer_flavor.gaussian_drift_res
+                    update!(tracker, get_score(tr), false, true)        
+                    gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
+
+                    jumpsucc!(tracker, "accept")
+                else
+                    jumpsucc!(tracker, "reject")
+                end
+
             end
-        elseif (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
+        end
+        rejects = 0
+        if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
             #Gaussian drift phase 
 
             (tr, a) = mh(tr, line_proposal, ())
@@ -198,6 +217,7 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
 
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
 
             # Blocks 2-N+1: Update the outlier classifications
             # (xs,) = get_args(tr)
@@ -208,12 +228,14 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
                 (tr, a) = mh(tr, selection)
                 update!(tracker, get_score(tr), false, false)
                 accepted!(tracker, a)
+                rejects += (!a ? 1 : 0)
             end
             
             # Block N+2: Update the prob_outlier parameter
             (tr, a) = mh(tr, select(:proboutlier))
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
 
         end
     end

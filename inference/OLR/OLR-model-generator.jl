@@ -25,7 +25,7 @@ for i = 1:n
     println("x$i = $(xs[i])")
 end
 
-for i in 1:n
+for i in 1:100
     println("outlier$i ~ bernoulli(proboutlier)")
     println("if outlier$i == 0")
     println("    mean$i = x$i * slope + intercept")
