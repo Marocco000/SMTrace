@@ -223,7 +223,7 @@ function compare_jumps_to_no_jumps(inference, data)
     inference_flavors = [plain, with_jumps]
     # inference_flavors = [with_jumps]
     # benchmark_score_progression_with_jumps(inference, data, inference_flavors, 20, 50)
-    benchmark_score_progression_with_jumps(inference, data, inference_flavors, 0, 2)#TODO do properly
+    benchmark_score_progression_with_jumps(inference, data, inference_flavors, 0, 10)#TODO do properly
 end
 
 function benchmark_score_progression_with_jumps(inference, data,  inference_flavors, burn_in=10, rounds=50)
@@ -260,7 +260,13 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
             push!(successes, tracker.jump_successes)
             # PLOT score progression with jumps for each inference run 
             plot_name = inference_flavor_name(flavor)
-                
+            
+            
+            #partial jump successes
+            open(RESULTS_DIR[] * "jump_succ_"*plot_name*string(i)*".txt", "w") do file
+                println(file, "jumps :$(tracker.jump_successes)")
+            end
+
             min_y = min(minimum(scoring), 0)
             max_y = max(maximum(scoring), 0)
 
@@ -273,14 +279,14 @@ function benchmark_score_progression_with_jumps(inference, data,  inference_flav
                 linewidth=2,
                 ylims = (min_y, max_y))
 
-            println(jumps)
+            # println(jumps)
             x_jump = findall(jumps)
             scatter!(x_jump, scoring[x_jump], 
                 markershape=:circle, 
                 markersize=8, 
                 label="Jump", 
                 color=:red)
-            println(plot_name)
+            # println(plot_name)
             savefig(scoring_plot, RESULTS_DIR[] * "figures/" *"score-progression-"*plot_name*"$(i-1)")
             ######
 

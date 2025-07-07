@@ -176,15 +176,15 @@ function inference(data, infer_flavor::Inference_flavor)
         # else 
             # perform standard inference (mh, block resim mh, etc)
             #block1: update sigmas
-            (tr, a) = mh(tr, select(:sigmaxstate))
+            (tr, a) = mh(tr, select(:sigmaxstate); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
 
-            (tr, a) = mh(tr, select(:sigmaxdistrict))
+            (tr, a) = mh(tr, select(:sigmaxdistrict); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
 
-            (tr, a) = mh(tr, select(:sigmaxtype))
+            (tr, a) = mh(tr, select(:sigmaxtype); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
         
@@ -196,12 +196,12 @@ function inference(data, infer_flavor::Inference_flavor)
 
                 if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
                     latent = eval(beta_statei) 
-                    (tr, a) = mh(tr, beta_state_drift_proposal, (latent, ))   
+                    (tr, a) = mh(tr, beta_state_drift_proposal, (latent, ); observations=observations)
                     update!(tracker, get_score(tr), true, false)
                     accepted!(tracker, a)
                     gaussian_drift_resources -= 1
                 else
-                    (tr, a) = mh(tr, selection)
+                    (tr, a) = mh(tr, selection; observations=observations)
                     update!(tracker, get_score(tr), false, false)
                     accepted!(tracker, a)
                 end                
@@ -215,13 +215,13 @@ function inference(data, infer_flavor::Inference_flavor)
 
                     if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
                         latent = Symbol("betaxdistrict$(s)To$(d)")
-                        (tr, a) = mh(tr, beta_district_drift_proposal, (latent, ))
+                        (tr, a) = mh(tr, beta_district_drift_proposal, (latent, ); observations=observations)
 
                         update!(tracker, get_score(tr), true, false)
                         accepted!(tracker, a)
                         gaussian_drift_resources -= 1
                     else
-                        (tr, a) = mh(tr, selection)
+                        (tr, a) = mh(tr, selection; observations=observations)
                         update!(tracker, get_score(tr), false, false)
                         accepted!(tracker, a)
                     end
@@ -234,13 +234,13 @@ function inference(data, infer_flavor::Inference_flavor)
 
                 if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
                     latent = eval(beta_typei)
-                    (tr, a) = mh(tr, beta_type_drift_proposal, (latent, ))
+                    (tr, a) = mh(tr, beta_type_drift_proposal, (latent, ); observations=observations)
 
                     update!(tracker, get_score(tr), true, false)
                     accepted!(tracker, a)
                     gaussian_drift_resources -= 1
                 else
-                    (tr, a) = mh(tr, selection)
+                    (tr, a) = mh(tr, selection; observations=observations)
                     update!(tracker, get_score(tr), false, false)
                     accepted!(tracker, a)
                 end

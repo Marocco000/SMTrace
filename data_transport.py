@@ -66,16 +66,17 @@ def take_model_from_files(solver, phase):
         add_fixed_current_trace(solver, choice_map, config.run_dir + 'parsing_results/current_trace.txt')
 
     # Check and add constraints for random samples that need to be fixed prior ot solving
-    for elem in choice_map:
-        if choice_map[elem].fixed_sample is not None and choice_map[elem].RC.is_observation == False:
-            print(f"Fixed sample for {elem}: {choice_map[elem].fixed_sample}")
-            solver.add(choice_map[elem].RC.value == choice_map[elem].fixed_sample)
-            # solver.add(choice_map[elem].RC.value == 10)#C3
+    if phase != 1:
+        for elem in choice_map:
+            if choice_map[elem].fixed_sample is not None and choice_map[elem].RC.is_observation == False:
+                print(f"Fixed sample for {elem}: {choice_map[elem].fixed_sample}")
+                solver.add(choice_map[elem].RC.value == choice_map[elem].fixed_sample)
+                # solver.add(choice_map[elem].RC.value == 10)#C3
 
 
     # Add bounds to the latent RC variables (eg. uniform[3,5] -> 3 <= x <= 5)
-    # if phase != 1: #TODO add back for jumps?
-    add_bounds_to_latent_RC_vars(solver, choice_map)
+    if phase != 1: #TODO add back for jumps?
+        add_bounds_to_latent_RC_vars(solver, choice_map)
 
 
     # Add likelihood computaiton decision variabels
@@ -366,7 +367,7 @@ def add_likelihood_dv(choice_map, solver):
     # For unknown RCs, likelihood depends on the stochastic alternatives
 
 
-def save_SMT_LIB_standard_model(solver, file = "smtmodels/simplepp_model_SMTLIB.smt2"):
+def save_SMT_LIB_standard_model(solver, file = "smtmodels/pp_model_SMTLIB.smt2"):
     """Saves a model in SMT-LIB standard format."""
     with open(file, "w") as f:
         f.write(solver.to_smt2())

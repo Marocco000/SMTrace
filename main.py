@@ -220,7 +220,6 @@ def use_manual_optimiz_loop(phase):
 
         if phase == 0: #ignore soft if just computing current trace prob
             maximize_soft_constr_naive_binary_search(max_soft_constr, satisfied_preferences, solver)
-
             # solver.add(satisfied_preferences >= max_soft_constr)
 
         # HARD CONSTRAINTS INSTEAD #c4

@@ -27,10 +27,9 @@ function make_synthetic_data(n)
     ys = Float64[]
     for i = 1:n
         y = true_mu + randn() * true_sigma
-        print
         push!(ys, y)
     end
-    print(ys)
+    # print(ys)
 
     ys
 end
@@ -82,76 +81,64 @@ function inference(data, infer_flavor::Inference_flavor)
     
     # Jumps    
     rejects = 0
-    jump_count = 1
+    jump_count = 2
 
     mh_steps_cap = 2000
 
     # Sample iterations
     while tracker.mh_steps <= mh_steps_cap
-        jump_condition = rejects > 55
-        println("Jump condition: #rejects: $rejects")
+        jump_condition = rejects > 1
+        # println("Jump condition: #rejects: $rejects")
         if infer_flavor.warm_jump && jump_condition && jump_count > 0
             # perform warm_jump if possible
-            # fixed_selection_options = [select(:mean1, :mean2, :mean3), select(:mean3, :mean2), select(:mean1, :mean3)]
-            # fixed_selection = fixed_selection_options[Int(j/2)]
+            
+            fixed_selection = select(:sigma)
+            optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+            # optional_tr = score_improve_smt(tr, observations, ppfile)
 
-            fixed_selection = select(:mean1, :mean2)#
-            fixed_selection = select(:z1)
-            fixed_selection = select(:mean1)
-            # optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
-            optional_tr = reuse_warm_start()
+            # optional_tr = reuse_warm_start()
             if optional_tr === nothing
                 println("UNSAT")
-            else 
-                #TODO only update if better? 
-                println("Pre-Jump score: $(get_score(tr))")
+                jumpsucc!(tracker, "unsat")
 
+            else 
                 score_before = get_score(tr)
                 score_smt = get_score(optional_tr)
-                small_prob = 1/10
-                accept_SMT_jump_prob = score_smt > score_before ? 1 : small_prob
-                accept_SMT_jump = rand() < accept_SMT_jump_prob
-                tr = optional_tr
-                println("PostJump score: $(get_score(tr))")
 
+                if score_before<score_smt
+                    tr = optional_tr
+                    # println("Pre-Jump score: $(get_score(tr))")
+                    # println("PostJump score: $(get_score(tr))")
 
-                update!(tracker, get_score(tr), false, true)        
-                gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
-                jump_count -= 1
+                    jumpsucc!(tracker, "accepted")
+                    update!(tracker, get_score(tr), false, true)
+                    gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
+                else
+                  jumpsucc!(tracker, "rejected")
+                end
+
             end
+            jump_count -= 1
+
         end
-        #TODO jumps & drifts
-        # if infer_flavor.warm_jump 
-        #     # perform warm_jump if possible
-        #     fixed_selection_options = [select(:mean1, :mean2), select(:mean3, :mean2), select(:mean1, :mean3)]
-        #     fixed_selection = fixed_selection_options[Int(j/2)]
-        #     try_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
-        #     if try_tr === nothing
-        #         iter += 1
-        #     else 
-        #         tr = try_tr
-        #         println("Pre-jump score $(get_score(tr))")
-        #         println("JUMP SCORE: $(get_score(tr))")
 
-
-        #         update!(tracker, get_score(tr), false, true)        
-        #         gaussian_drift_resources = infer_flavor.gaussian_drift_res # reset resources after smt jump
-        #     end
-        #     # Options: try to improve only on e of the means and the allocations, add less resources
+        rejects = 0
         if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
             # perform gaussian drifts post smt trace
 
-            (tr, a) = mh(tr, mean_drift_proposal, ())
+            (tr, a) = mh(tr, mean_drift_proposal, (); observations=observations)
             update!(tracker, get_score(tr), true, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
 
             # (tr, a) = mh(tr, sigma_drift_proposal, ())
             # update!(tracker, get_score(tr), true, false)
             # accepted!(tracker, a)
 
-            (tr, a) = mh(tr, select(:sigma))
+            (tr, a) = mh(tr, select(:sigma); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
+            rejects += (!a ? 1 : 0)
 
             gaussian_drift_resources -= 1
 
@@ -159,13 +146,13 @@ function inference(data, infer_flavor::Inference_flavor)
             # perform standard inference (mh, block resim mh, etc)
 
             #update normal params
-            (tr, a) = mh(tr, select(:mu))
+            (tr, a) = mh(tr, select(:mu); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
             rejects += (!a ? 1 : 0)
  
             
-            (tr, a) = mh(tr, select(:sigma))
+            (tr, a) = mh(tr, select(:sigma); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
             rejects += (!a ? 1 : 0)

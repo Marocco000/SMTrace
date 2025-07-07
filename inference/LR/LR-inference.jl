@@ -109,7 +109,7 @@ function inference_over_simple_LR(xs, infer_flavor::Inference_flavor)
 
         # conseq_rejects = rejects == 1 ? conseq_rejects + 1 : 0 
         jump_condition = rejects >= 1
-        print("JUMP COND: $jump_condition")
+        # print("JUMP COND: $jump_condition")
        
         if infer_flavor.warm_jump && jump_condition && jump_count > 0
             # perform warm_jump if possible
@@ -119,10 +119,10 @@ function inference_over_simple_LR(xs, infer_flavor::Inference_flavor)
             if jump_count == 1
                 fixed_selection = select(:intercept)
             end
-            # optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+            optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
             
             #Score improve jump  
-            optional_tr = score_improve_smt(tr, observations, ppfile)
+            # optional_tr = score_improve_smt(tr, observations, ppfile)
 
             if optional_tr === nothing
                 println("UNSAT")

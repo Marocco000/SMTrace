@@ -140,24 +140,23 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
     mh_steps_cap = 2000
 
     rejects = 0 
+    jump_count = 2
     # Sample iterations
     while tracker.mh_steps <= mh_steps_cap
         println("rejects : $rejects")
         jump_condition = rejects > 5
-        if infer_flavor.warm_jump && jump_condition#TODO add frequency j%infer_flavor.warm_jump_frequency == 0
+        if infer_flavor.warm_jump && jump_condition && jump_count> 0#TODO add frequency j%infer_flavor.warm_jump_frequency == 0
             #Perform warm jump (fully with diversity or for random block)
             # if j == 2
             #     params = select(:outlier1)
             # else
-            params = select( :slope, :intercept) #reintroduce noise here TODO
+            params = select(:intercept) #reintroduce noise here TODO
             # end
 
-            # tr_try = block_smt(params, tr, observations, ppfile) #TODO: pass ppfile
-            tr_try = score_improve_smt(tr, observations, ppfile)
+            tr_try = block_smt_with_fixed_selection(params, tr, observations, ppfile) #TODO: pass ppfile
+            # tr_try = score_improve_smt(tr, observations, ppfile)
 
             if tr_try === nothing
-                # try again or bail?
-                # iter+=1
                 jumpsucc!(tracker, "unsat")
             else 
 
@@ -177,12 +176,13 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
                 end
 
             end
+            jump_count -= 1
         end
         rejects = 0
         if (infer_flavor.warm_jump || infer_flavor.warm_start) && gaussian_drift_resources > 0
             #Gaussian drift phase 
 
-            (tr, a) = mh(tr, line_proposal, ())
+            (tr, a) = mh(tr, line_proposal, (); observations=observations)
             update!(tracker, get_score(tr), true, false)
             accepted!(tracker, a)
             gaussian_drift_resources -= 1
@@ -192,7 +192,7 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
                 selection = select(eval(outlier_i))
                 
                 # normal resample
-                (tr, a) = mh(tr, selection) 
+                (tr, a) = mh(tr, selection; observations=observations)
                 update!(tracker, get_score(tr), false, false)
 
                 #drift resample of bernoulli
@@ -204,7 +204,7 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
                 # gaussian_drift_resources -= 1
             end
 
-            (tr, a) = mh(tr, select(:proboutlier))
+            (tr, a) = mh(tr, select(:proboutlier); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
 
@@ -213,7 +213,7 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
 
             #Block 1: Update the line's parameters
             line_params = select( :slope, :intercept) #reintroduce noise here TODO
-            (tr, a) = mh(tr, line_params)
+            (tr, a) = mh(tr, line_params; observations=observations)
 
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
@@ -225,14 +225,14 @@ function inference_over_LR_with_outliers(xs, infer_flavor::Inference_flavor, ite
             for i=1:100 #TODO not hardcoded
                 outlier_i = QuoteNode(Symbol(:outlier, i))
                 selection = select(eval(outlier_i))
-                (tr, a) = mh(tr, selection)
+                (tr, a) = mh(tr, selection; observations=observations)
                 update!(tracker, get_score(tr), false, false)
                 accepted!(tracker, a)
                 rejects += (!a ? 1 : 0)
             end
             
             # Block N+2: Update the prob_outlier parameter
-            (tr, a) = mh(tr, select(:proboutlier))
+            (tr, a) = mh(tr, select(:proboutlier); observations=observations)
             update!(tracker, get_score(tr), false, false)
             accepted!(tracker, a)
             rejects += (!a ? 1 : 0)

@@ -106,11 +106,9 @@ function inference(data, infer_flavor::Inference_flavor)
 
             # Block jump
             fixed_selection = jump_count == 2 ? select(:mean1) : select(:mean2)
-            # fixed_selection = select(:mean1, :mean2)#
-            # fixed_selection = select(:z1)
-            # fixed_selection = select(:mean1)
-            optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
-            # optional_tr = score_improve_smt(tr, observations, ppfile)
+
+            # optional_tr = block_smt_with_fixed_selection(fixed_selection, tr, observations, ppfile)
+            optional_tr = score_improve_smt(tr, observations, ppfile)
             # optional_tr = reuse_warm_start()
             if optional_tr === nothing
                 println("UNSAT")
